@@ -43,22 +43,25 @@ export default function HubCard({ params }: { params: Promise<{ id: string }> })
 
   async function act(action: "approve" | "reject" | "flag") {
     setPending(true);
-    const res = await fetch(`/api/referrals/${id}/commit`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
-    const body = await res.json();
-    setPending(false);
-    if (!res.ok || body.outcome === "refused") {
-      setError(body.reason ?? "Could not save the decision");
-      return;
+    try {
+      const res = await fetch(`/api/referrals/${id}/commit`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { outcome?: string; reason?: string };
+      if (!res.ok || body.outcome === "refused") {
+        setError(body.reason ?? "Could not save the decision");
+        return;
+      }
+      if (action === "approve" && data?.referral.sessionId) {
+        window.location.href = `/sessions/${data.referral.sessionId}`;
+        return;
+      }
+      window.location.href = "/inbox";
+    } finally {
+      setPending(false);
     }
-    if (action === "approve" && data?.referral.sessionId) {
-      window.location.href = `/sessions/${data.referral.sessionId}`;
-      return;
-    }
-    window.location.href = "/inbox";
   }
 
   if (!data?.referral) {

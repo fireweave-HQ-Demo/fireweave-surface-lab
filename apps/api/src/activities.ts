@@ -126,14 +126,58 @@ export async function persistExtraction(input: { referralId: string; clinicId: s
   });
 }
 
+export async function loadWritePlan(input: { referralId: string; clinicId: string }) {
+  return withClinic(input.clinicId, async (tx) => {
+    const [referral] = await tx.select().from(referrals).where(eq(referrals.id, input.referralId));
+    if (!referral) throw new Error("missing referral");
+    const fields = await tx.select().from(extractedFields).where(eq(extractedFields.referralId, input.referralId));
+    const value = (name: string) => fields.find((field) => field.name === name)?.value ?? "";
+    const [rulesRow] = await tx.select().from(clinicRules).where(eq(clinicRules.clinicId, input.clinicId));
+    const rules = rulesRow ? clinicRulesSchema.parse(rulesRow.document) : giPreset;
+    const visit = planVisit(
+      packetSchema.parse({
+        filename: referral.filename ?? "referral.pdf",
+        patientName: referral.patientName ?? value("patientName"),
+        dob: value("dob") || "1980-01-01",
+        reason: referral.reason ?? value("reason"),
+        payer: value("payer"),
+        confidence: 0.9,
+        sections: [],
+      }),
+      rules,
+    );
+    return {
+      sessionId: referral.sessionId,
+      provider: visit?.provider ?? "Dr. Patel",
+      timeOfDay: visit?.timeOfDay ?? "morning",
+      phone: value("phone"),
+      maxAttempts: rules.outreach.maxAttempts,
+      waitMs: waitMs(rules.outreach.hoursBetween),
+      screener: voiceScript(rules).questions,
+      patientName: referral.patientName ?? value("patientName"),
+      dob: value("dob"),
+    };
+  });
+}
+
+function addDays(iso: string, days: number) {
+  const date = new Date(`${iso}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 export async function reserveSlot(input: { clinicId: string; provider: string; timeOfDay: "morning" | "end_of_day" }) {
   const rows = await withClinic(input.clinicId, (tx) =>
     tx.select().from(appointments).where(eq(appointments.provider, input.provider)),
   );
-  const taken = rows.map((row) => row.slot);
-  const slot = nextSlot(input.timeOfDay, taken);
-  if (!slot) throw new Error("no open slot");
-  return slot;
+  const start = "2026-10-24";
+  for (let offset = 0; offset < 14; offset += 1) {
+    const day = addDays(start, offset);
+    const taken = rows.filter((row) => row.day === day).map((row) => row.slot);
+    const slot = nextSlot(input.timeOfDay, taken, day);
+    if (slot) return slot;
+  }
+  throw new Error("no open slot");
 }
 
 export async function recordAppointment(input: {

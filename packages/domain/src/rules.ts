@@ -12,7 +12,11 @@ function daysSince(iso: string, now: Date): number | null {
 }
 
 export function planVisit(packet: Packet, rules: ClinicRules): { provider: string; timeOfDay: "morning" | "end_of_day" } | null {
-  const route = rules.payerRouting.find((item) => item.payer.toLowerCase() === packet.payer.toLowerCase());
+  const payer = packet.payer.trim().toLowerCase();
+  const route =
+    rules.payerRouting.find((item) => item.payer.toLowerCase() === payer) ??
+    rules.payerRouting.find((item) => item.payer.toLowerCase() === "default") ??
+    rules.payerRouting[0];
   if (!route) return null;
   return { provider: route.provider, timeOfDay: route.timeOfDay ?? "morning" };
 }

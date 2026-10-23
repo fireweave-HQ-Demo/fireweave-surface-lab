@@ -143,23 +143,26 @@ export function InboxTable() {
   async function act(action: "approve" | "reject" | "flag") {
     if (!openId) return;
     setPending(true);
-    const res = await fetch(`/api/referrals/${openId}/commit`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
-    const body = await res.json();
-    setPending(false);
-    if (!res.ok || body.outcome === "refused") {
-      toast.push({ tone: "error", title: body.reason ?? "Could not save the decision", code: ERROR_CODES.RUNNER_REFUSED });
-      return;
-    }
-    const sessionId = rows?.find((row) => row.id === openId)?.sessionId;
-    setOpenId("");
-    setConfirm("");
-    await load();
-    if (action === "approve" && sessionId) {
-      window.location.href = `/sessions/${sessionId}`;
+    try {
+      const res = await fetch(`/api/referrals/${openId}/commit`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { outcome?: string; reason?: string };
+      if (!res.ok || body.outcome === "refused") {
+        toast.push({ tone: "error", title: body.reason ?? "Could not save the decision", code: ERROR_CODES.RUNNER_REFUSED });
+        return;
+      }
+      const sessionId = rows?.find((row) => row.id === openId)?.sessionId;
+      setOpenId("");
+      setConfirm("");
+      await load();
+      if (action === "approve" && sessionId) {
+        window.location.href = `/sessions/${sessionId}`;
+      }
+    } finally {
+      setPending(false);
     }
   }
 

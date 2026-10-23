@@ -149,7 +149,13 @@ app.post("/api/referrals/:id/commit", async (c) => {
   );
   if (result.outcome === "applied") {
     await recordSpan("referral.commit", { clinic_id: who.clinicId, referral_id: c.req.param("id"), action });
-    await signalReview(`referral-${c.req.param("id")}`, { action, token: result.token });
+    await signalReview({
+      workflowId: `referral-${c.req.param("id")}`,
+      clinicId: who.clinicId,
+      referralId: c.req.param("id"),
+      sandboxUrl: env.sandboxEhrUrl,
+      payload: { action, token: result.token },
+    });
   }
   const { token: _token, ...publicResult } = result.outcome === "applied" ? result : { ...result, token: undefined };
   return c.json(publicResult);

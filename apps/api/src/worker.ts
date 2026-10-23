@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import { NativeConnection, Worker } from "@temporalio/worker";
 import {
   loadPdf,
+  loadWritePlan,
   markCompleted,
   markFailed,
   persistExtraction,
@@ -21,6 +22,7 @@ const worker = await Worker.create({
   workflowsPath: fileURLToPath(new URL("./workflows.js", import.meta.url)),
   activities: {
     loadPdf,
+    loadWritePlan,
     persistExtraction,
     reserveSlot,
     recordAppointment,

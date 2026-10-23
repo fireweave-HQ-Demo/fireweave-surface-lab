@@ -3,7 +3,7 @@ import statPacket from "../../../fixtures/packets/gi-stat.json";
 import incompletePacket from "../../../fixtures/packets/gi-incomplete.json";
 import { packetSchema, type Packet } from "@clinic/contracts";
 import { giPreset } from "../src/preset";
-import { evaluate } from "../src/rules";
+import { evaluate, planVisit } from "../src/rules";
 
 const stat = packetSchema.parse(statPacket);
 const incomplete = packetSchema.parse(incompletePacket);
@@ -46,8 +46,24 @@ describe("GI preset", () => {
     expect(evaluate({ ...stat, lastColonoscopy: "2020-01-01" }, giPreset, now).kind).toBe("ready");
   });
 
-  it("asks a human when the payer has no route", () => {
+  it("books the default doctor when the payer is not on the list", () => {
+    const withDefault = {
+      ...giPreset,
+      payerRouting: [
+        { payer: "Cigna PPO", provider: "Dr. Patel", timeOfDay: "morning" as const },
+        { payer: "default", provider: "Dr. Kim", timeOfDay: "morning" as const },
+      ],
+    };
     expect(evaluate({ ...stat, payer: "Aetna" }, giPreset)).toMatchObject({
+      kind: "ready",
+      category: "STAT",
+    });
+    expect(planVisit({ ...stat, payer: "Aetna" }, withDefault)).toEqual({ provider: "Dr. Kim", timeOfDay: "morning" });
+    expect(planVisit(stat, withDefault)).toEqual({ provider: "Dr. Patel", timeOfDay: "morning" });
+  });
+
+  it("asks a human when the clinic has no doctors to route to", () => {
+    expect(evaluate(stat, { ...giPreset, payerRouting: [] })).toMatchObject({
       kind: "needs_human",
       detail: "no payer route",
     });

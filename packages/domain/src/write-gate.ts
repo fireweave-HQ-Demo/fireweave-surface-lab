@@ -42,7 +42,8 @@ export async function commit(db: GateDb, intent: CommitIntent): Promise<CommitRe
     .from(referrals)
     .where(and(eq(referrals.id, intent.referralId), eq(referrals.clinicId, intent.clinicId)));
   if (!referral) return { outcome: "refused", reason: "missing" };
-  if (referral.status !== "awaiting_review") return { outcome: "refused", reason: "not_reviewable" };
+  const retryWrite = intent.action === "approve" && referral.status === "running";
+  if (referral.status !== "awaiting_review" && !retryWrite) return { outcome: "refused", reason: "not_reviewable" };
 
   const [setting] = await db
     .select()

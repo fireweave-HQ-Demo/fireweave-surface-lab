@@ -19,4 +19,8 @@ export const COPY = {
   signInError: "Check the email and password.",
   signUpError: "Could not create the account.",
   clinicError: "The account exists, but the clinic was not created.",
+  addDoctor: "Add doctor",
+  doctorAdded: "Doctor added. They can sign in with that email.",
+  doctorFailed: "Could not add that person.",
+  doctorExists: "That email is already in use.",
 } as const;

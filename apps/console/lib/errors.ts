@@ -5,6 +5,7 @@ export const ERROR_CODES = {
   TOKEN_EXPIRED: "E-430",
   RUNNER_REFUSED: "E-431",
   SUBMIT_BLOCKED: "E-440",
+  MEMBER_FAILED: "E-450",
   NOT_IMPLEMENTED: "E-501",
 } as const;
 

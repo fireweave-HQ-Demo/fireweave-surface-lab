@@ -1,4 +1,4 @@
-import { condition, defineSignal, proxyActivities, setHandler, sleep } from "@temporalio/workflow";
+import { condition, defineSignal, patched, proxyActivities, setHandler, sleep } from "@temporalio/workflow";
 
 export const reviewSignal = defineSignal("review");
 
@@ -37,9 +37,24 @@ async function runReferral(input) {
   setHandler(reviewSignal, (value) => {
     decision = value;
   });
-  const arrived = await condition(() => decision !== null, "15 minutes");
+  const reviewWait = patched("review-wait-7d") ? "7 days" : "15 minutes";
+  const arrived = await condition(() => decision !== null, reviewWait);
   if (!arrived || !decision || decision.action !== "approve" || !saved.sessionId) return saved;
+  return writeApproved(input, saved, decision);
+}
 
+export async function ReferralWriteFlow(input) {
+  try {
+    const saved = await clinic.loadWritePlan({ referralId: input.referralId, clinicId: input.clinicId });
+    return await writeApproved(input, saved, { action: "approve", token: input.token });
+  } catch (error) {
+    await clinic.markFailed({ referralId: input.referralId, clinicId: input.clinicId, sessionId: input.sessionId ?? null });
+    throw error;
+  }
+}
+
+async function writeApproved(input, saved, decision) {
+  if (!saved.sessionId) return saved;
   const slot = await clinic.reserveSlot({
     clinicId: input.clinicId,
     provider: saved.provider,

@@ -84,7 +84,7 @@ def official(name: str) -> Path:
     return blank if blank.exists() else SOURCE / name
 
 
-def stamp(name: str, source: str, lines: list[str], labs: bool, *aliases: Path) -> None:
+def write_flat(path: Path, source: str, lines: list[str], labs: bool) -> None:
     writer = PdfWriter()
     writer.append(cover_pdf(lines))
     official_form = PdfReader(str(official(source)))
@@ -96,11 +96,13 @@ def stamp(name: str, source: str, lines: list[str], labs: bool, *aliases: Path) 
             first = False
     if labs:
         attach_labs(writer)
-    buffer = BytesIO()
-    writer._root_object.update({NameObject("/NeedAppearances"): BooleanObject(True)})
-    writer.write(buffer)
-    payload = buffer.getvalue()
-    for target in [ROOT / name, *aliases]:
+    write(path, writer)
+
+
+def stamp(name: str, source: str, lines: list[str], labs: bool, *aliases: Path) -> None:
+    write_flat(ROOT / name, source, lines, labs)
+    payload = (ROOT / name).read_bytes()
+    for target in aliases:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(payload)
 

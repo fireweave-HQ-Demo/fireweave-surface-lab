@@ -10,10 +10,13 @@ import {
   clinicRules,
   clinicalNotes,
   extractedFields,
+  member,
   priorAuths,
   referrals,
+  user,
 } from "@clinic/db";
 import { draftVisitNote, giPreset, mintApprovalToken, missingAuthFields, necessityNote } from "@clinic/domain";
+import { auth } from "./auth";
 import type { Staff } from "./authz";
 import { withClinic } from "./db";
 import { env } from "./env";
@@ -80,9 +83,19 @@ export function registerDesk(app: Hono, staff: (c: { req: { raw: Request } }) =>
     const who = await staff(c);
     if (!who) return c.json({ error: "unauthorized" }, 401);
     if (who.role === "auditor") return c.json({ error: "forbidden" }, 403);
-    const body = await c.req.json<{ requiredDocuments?: string[] }>();
+    const body = await c.req.json<{
+      requiredDocuments?: string[];
+      payerRouting?: Array<{ payer: string; provider: string; timeOfDay?: "morning" | "end_of_day" }>;
+    }>();
     const need = (body.requiredDocuments ?? []).map((item) => item.trim()).filter(Boolean);
     if (need.length === 0) return c.json({ error: "required documents" }, 400);
+    const routing = [...(body.payerRouting ?? [])].reduce<Array<{ payer: string; provider: string; timeOfDay: "morning" | "end_of_day" }>>((rows, row) => {
+      const payer = row.payer.trim();
+      const provider = row.provider.trim();
+      if (!payer || !provider) return rows;
+      const next = { payer, provider, timeOfDay: row.timeOfDay === "end_of_day" ? "end_of_day" as const : "morning" as const };
+      return [...rows.filter((item) => item.payer.toLowerCase() !== payer.toLowerCase()), next];
+    }, []);
     const saved = await withClinic(who.clinicId, async (tx) => {
       const [row] = await tx.select().from(clinicRules).where(eq(clinicRules.clinicId, who.clinicId));
       const rules = row ? clinicRulesSchema.parse(row.document) : giPreset;
@@ -90,6 +103,7 @@ export function registerDesk(app: Hono, staff: (c: { req: { raw: Request } }) =>
         ...rules,
         version: rules.version + 1,
         requiredDocuments: [{ when: "always", need }, ...rules.requiredDocuments.filter((item) => item.when !== "always")],
+        payerRouting: routing.length ? routing : rules.payerRouting,
       };
       await tx
         .insert(clinicRules)
@@ -272,5 +286,63 @@ export function registerDesk(app: Hono, staff: (c: { req: { raw: Request } }) =>
       });
     });
     return c.json({ outcome: "applied", status: "completed" });
+  });
+
+  app.get("/api/members", async (c) => {
+    const who = await staff(c);
+    if (!who) return c.json({ error: "unauthorized" }, 401);
+    const rows = await withClinic(who.clinicId, (tx) =>
+      tx
+        .select({
+          id: member.id,
+          name: user.name,
+          email: user.email,
+          role: member.role,
+        })
+        .from(member)
+        .innerJoin(user, eq(member.userId, user.id))
+        .where(eq(member.organizationId, who.clinicId)),
+    );
+    return c.json(rows);
+  });
+
+  app.post("/api/members", async (c) => {
+    const who = await staff(c);
+    if (!who) return c.json({ error: "unauthorized" }, 401);
+    if (who.role === "auditor") return c.json({ error: "forbidden" }, 403);
+    const body = await c.req.json<{ name?: string; email?: string; password?: string; role?: string }>();
+    const name = (body.name ?? "").trim();
+    const email = (body.email ?? "").trim().toLowerCase();
+    const password = body.password ?? "";
+    const role = body.role === "doctor" ? "doctor" : "staff";
+    if (!name || !email || password.length < 8) return c.json({ error: "name, email, and a password of 8 or more" }, 400);
+    const created = await auth.api.signUpEmail({ body: { name, email, password } }).catch(() => null);
+    if (!created?.user) return c.json({ error: "that email is already in use" }, 409);
+    const row = await withClinic(who.clinicId, async (tx) => {
+      await tx.insert(member).values({
+        id: crypto.randomUUID(),
+        organizationId: who.clinicId,
+        userId: created.user.id,
+        role,
+      });
+      if (role === "doctor") {
+        const [rulesRow] = await tx.select().from(clinicRules).where(eq(clinicRules.clinicId, who.clinicId));
+        const rules = rulesRow ? clinicRulesSchema.parse(rulesRow.document) : giPreset;
+        const hasDefault = rules.payerRouting.some((item) => item.payer.toLowerCase() === "default");
+        if (!hasDefault) {
+          const next = {
+            ...rules,
+            version: rules.version + 1,
+            payerRouting: [...rules.payerRouting, { payer: "default", provider: name, timeOfDay: "morning" as const }],
+          };
+          await tx
+            .insert(clinicRules)
+            .values({ clinicId: who.clinicId, version: next.version, document: next })
+            .onConflictDoUpdate({ target: clinicRules.clinicId, set: { version: next.version, document: next } });
+        }
+      }
+      return { id: created.user.id, name, email, role };
+    });
+    return c.json(row, 201);
   });
 }

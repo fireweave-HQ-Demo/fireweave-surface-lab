@@ -6,7 +6,7 @@ export default function HelpPage() {
       <PageHeader title="Help" subtitle="How this desk works" />
       <div className="card stack">
         <p>Upload a referral PDF from Inbox. Review the extract. Looks good starts the chart write. Every write needs a person.</p>
-        <p className="muted">Live phone, EHR connect, and invites are not in this build.</p>
+        <p className="muted">Add a doctor from Settings. Live phone and EHR connect are not in this build.</p>
       </div>
     </Page>
   );

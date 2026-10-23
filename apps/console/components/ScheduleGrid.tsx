@@ -22,6 +22,7 @@ const hours = Array.from({ length: 21 }, (_, index) => {
 
 export function ScheduleGrid() {
   const [rows, setRows] = useState<Appointment[] | null>(null);
+  const [doctors, setDoctors] = useState<string[]>([]);
   const [provider, setProvider] = useState("all");
   const [open, setOpen] = useState<Appointment | null>(null);
 
@@ -33,10 +34,18 @@ export function ScheduleGrid() {
         return;
       }
       if (res.ok) setRows(await res.json());
+      const people = await fetch("/api/members");
+      if (people.ok) {
+        const list = (await people.json()) as { name?: string; role?: string }[];
+        setDoctors(list.filter((row) => row.role === "doctor" && row.name).map((row) => row.name as string));
+      }
     })();
   }, []);
 
-  const providers = useMemo(() => Array.from(new Set((rows ?? []).map((row) => row.provider))), [rows]);
+  const providers = useMemo(
+    () => Array.from(new Set([...doctors, ...(rows ?? []).map((row) => row.provider)])),
+    [doctors, rows],
+  );
   const shown = (rows ?? []).filter((row) => provider === "all" || row.provider === provider);
 
   return (
@@ -73,7 +82,7 @@ export function ScheduleGrid() {
             {days.map((day) => (
               <div className="cell" key={day}>
                 <strong>{day}</strong>
-                <div className="muted">{provider === "all" ? "Dr. Patel" : provider} · GI</div>
+                <div className="muted">{provider === "all" ? (providers[0] ? "All doctors" : "No doctor yet") : provider} · GI</div>
               </div>
             ))}
             {hours.map((slot) => (

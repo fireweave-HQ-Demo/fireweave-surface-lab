@@ -47,14 +47,17 @@ export function ScribeWorkspace() {
   async function approve() {
     if (!note) return;
     setBusy(true);
-    const res = await fetch(`/api/notes/${note.id}/commit`, { method: "POST" });
-    const body = await res.json();
-    setBusy(false);
-    if (!res.ok) {
-      setError(body.reason ?? "Could not write the note");
-      return;
+    try {
+      const res = await fetch(`/api/notes/${note.id}/commit`, { method: "POST" });
+      const body = (await res.json().catch(() => ({}))) as { reason?: string };
+      if (!res.ok) {
+        setError(body.reason ?? "Could not write the note");
+        return;
+      }
+      setNote({ ...note, status: "completed" });
+    } finally {
+      setBusy(false);
     }
-    setNote({ ...note, status: "completed" });
   }
 
   return (

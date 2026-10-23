@@ -45,10 +45,21 @@ class OfficialPackets(unittest.TestCase):
                 self.assertEqual(packet["payer"], payer)
 
     def test_blank_official_form_is_rejected(self) -> None:
-        with self.assertRaises(RuntimeError):
-            parse_pdf((ROOT / "source" / "stanford.pdf").read_bytes(), "stanford.pdf")
-        with self.assertRaises(RuntimeError):
-            parse_pdf((ROOT / "source" / "cms1500.pdf").read_bytes(), "cms1500.pdf")
+        blanks = ["stanford.pdf", "cms1500.pdf", "nci-cbc.pdf", "nlm-labs.pdf"]
+        for name in blanks:
+            with self.subTest(name=name):
+                with self.assertRaises(RuntimeError):
+                    parse_pdf((ROOT / "source" / name).read_bytes(), name)
+
+    def test_official_sample_packets_are_readable(self) -> None:
+        samples = sorted((ROOT / "samples").glob("*.pdf"))
+        self.assertGreaterEqual(len(samples), 40)
+        for path in samples:
+            with self.subTest(name=path.name):
+                packet = parse_pdf(path.read_bytes(), path.name)
+                self.assertTrue(packet["patientName"])
+                self.assertTrue(packet["dob"])
+                self.assertTrue(packet["reason"])
 
     def test_a_file_without_labels_is_rejected(self) -> None:
         with self.assertRaises(RuntimeError):

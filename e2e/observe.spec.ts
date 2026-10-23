@@ -44,4 +44,11 @@ test("a referral write is visible in OpenObserve and a planted SSN is not", asyn
   const dumped = JSON.stringify(redacted);
   expect(dumped).not.toContain("123-45-6789");
   expect(dumped).not.toContain("Avery Quinn");
+
+  await page.goto("/inbox");
+  await expect(page.getByRole("link", { name: "Review Avery Quinn" })).toBeVisible({ timeout: 60_000 });
+  await page.getByRole("link", { name: "Review Avery Quinn" }).click();
+  await page.getByRole("button", { name: "Reject" }).click();
+  await page.getByRole("dialog", { name: "Reject referral" }).getByRole("button", { name: "Reject" }).click();
+  await expect(page.getByRole("heading", { name: "Referral inbox" })).toBeVisible();
 });
