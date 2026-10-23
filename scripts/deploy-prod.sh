@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pull the node image Actions just published, then restart console/api/worker on it.
+# Restart console/api/worker on the clinic-node:prod image already on the host.
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-$HOME/clinic-assistent}"
@@ -15,13 +15,10 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
-if [[ -z "${GH_TOKEN:-}" ]]; then
-  echo "GH_TOKEN is required to pull $IMAGE" >&2
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+  echo "$IMAGE is not on this host" >&2
   exit 1
 fi
-
-echo "${GH_TOKEN}" | docker login ghcr.io -u "${GH_USER:-x-access-token}" --password-stdin
-docker pull "$IMAGE"
 
 SERVICES="postgres minio temporal api worker console sandbox-ehr sandbox-payer agent-worker"
 if docker image inspect ghcr.io/fireweave-hq-demo/clinic-browser:prod >/dev/null 2>&1; then
