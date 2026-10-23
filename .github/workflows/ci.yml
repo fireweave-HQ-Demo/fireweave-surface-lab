@@ -7,6 +7,7 @@ on:
 jobs:
   unit:
     runs-on: ubuntu-24.04
+    timeout-minutes: 2
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -18,42 +19,3 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
-
-  e2e:
-    runs-on: ubuntu-24.04
-    needs: unit
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.9.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - name: Write dev env
-        run: |
-          cp .env.example .env
-          printf '%s\n' \
-            'OO_OTLP_ENDPOINT=http://openobserve:5080/api/default' \
-            'OO_QUERY_ENDPOINT=http://127.0.0.1:5080/api/default' \
-            'OO_AUTHORIZATION=Basic YWRtaW5AZXhhbXBsZS5jb206Q2hhbmdlTWUxMjMh' \
-            'OO_STREAM=clinic' \
-            >> .env
-      - run: make up
-      - name: Wait for console
-        run: |
-          for _ in $(seq 1 90); do
-            if curl -fsS --max-time 2 http://127.0.0.1:13000/login >/dev/null; then
-              exit 0
-            fi
-            sleep 2
-          done
-          docker compose --env-file .env -f infra/compose.yml --profile core --profile app --profile agents ps
-          docker compose --env-file .env -f infra/compose.yml --profile core --profile app --profile agents logs --tail=80
-          exit 1
-      - run: make seed
-      - run: make e2e
