@@ -24,4 +24,5 @@ COPY --from=build /out/api /app
 COPY --from=build /app/packages/db/migrations /packages/db/migrations
 COPY --from=build /app/apps/console/.next/standalone /console
 COPY --from=build /app/apps/console/.next/static /console/apps/console/.next/static
+COPY --from=build /app/apps/console/public /console/apps/console/public
 CMD ["./node_modules/.bin/tsx", "src/server.ts"]
