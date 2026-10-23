@@ -20,10 +20,10 @@ The console is at http://127.0.0.1:13000. Sign in as `staff@demo.clinic` / `pass
 |---|---|---|
 | Compose | `infra/compose.yml` (`make up`) | `infra/compose.prod.yml` |
 | Bind | `127.0.0.1:13000` | host `:80` |
-| Secrets | `.env` from `.env.example` | GitHub Actions secrets → `~/clinic-os/.env` |
+| Secrets | `.env` from `.env.example` | GitHub Actions secrets → `~/clinic-assistent/.env` |
 | Extra | OpenObserve, Temporal UI, marketing, voice | slim stack only |
 
-Push to `main` deploys to EC2 (`54.147.34.187`) via `.github/workflows/deploy.yml`. Production URL: http://54.147.34.187
+Push to `main` on [clinic-assistent](https://github.com/fireweave-HQ-Demo/clinic-assistent) deploys to EC2 (`54.147.34.187`) via `.github/workflows/deploy.yml`. Production URL: http://54.147.34.187
 
 `make test` runs the rules and write-gate tests on the host. `make down` stops the stack.
 

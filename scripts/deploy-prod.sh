@@ -2,7 +2,7 @@
 # Restart the images already on the host. No build, no registry pull.
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-$HOME/clinic-os}"
+APP_DIR="${APP_DIR:-$HOME/clinic-assistent}"
 cd "$APP_DIR"
 
 dc() {

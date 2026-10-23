@@ -39,8 +39,8 @@ jobs:
           envs: GH_TOKEN,PUBLIC_URL,POSTGRES_PASSWORD,MINIO_ROOT_USER,MINIO_ROOT_PASSWORD,CLINIC_DATA_KEY,BETTER_AUTH_SECRET,INTERNAL_TOKEN,SEED_EMAIL,SEED_PASSWORD
           script: |
             set -euo pipefail
-            APP_DIR="$HOME/clinic-os"
-            ORIGIN="https://x-access-token:${GH_TOKEN}@github.com/fireweave-HQ-Demo/fireweave-test-repo.git"
+            APP_DIR="$HOME/clinic-assistent"
+            ORIGIN="https://x-access-token:${GH_TOKEN}@github.com/fireweave-HQ-Demo/clinic-assistent.git"
             if [ ! -d "$APP_DIR/.git" ]; then
               rm -rf "$APP_DIR"
               git clone --depth=1 --branch main "$ORIGIN" "$APP_DIR"
@@ -50,7 +50,7 @@ jobs:
             git fetch --depth=1 origin "+refs/heads/main:refs/remotes/origin/main"
             git checkout -B main origin/main
             git reset --hard origin/main
-            git remote set-url origin https://github.com/fireweave-HQ-Demo/fireweave-test-repo.git
+            git remote set-url origin https://github.com/fireweave-HQ-Demo/clinic-assistent.git
             printf '%s\n' \
               "PUBLIC_URL=${PUBLIC_URL}" \
               "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" \
