@@ -1,0 +1,167 @@
+# Production stack. Local/dev stays on infra/compose.yml (127.0.0.1, demo keys).
+# This file is for the EC2 host only. Secrets come from .env — never commit it.
+name: clinic-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: clinic
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: clinic
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clinic -d clinic"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pg:/var/lib/postgresql/data
+    mem_limit: 256m
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    restart: unless-stopped
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio:/data
+    mem_limit: 128m
+
+  temporal:
+    image: temporalio/auto-setup:1.27.2
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: clinic
+      POSTGRES_PWD: ${POSTGRES_PASSWORD}
+      POSTGRES_SEEDS: postgres
+      POSTGRES_TLS_ENABLED: "false"
+      POSTGRES_TLS_DISABLE_HOST_VERIFICATION: "true"
+    mem_limit: 512m
+
+  api:
+    image: clinic-node:prod
+    restart: unless-stopped
+    build:
+      context: ..
+      dockerfile: infra/docker/node.prod.Dockerfile
+    command: ["pnpm", "--filter", "@clinic/api", "exec", "tsx", "src/server.ts"]
+    environment:
+      DATABASE_URL: postgres://clinic_app:clinic_app@postgres:5432/clinic
+      DATABASE_URL_ADMIN: postgres://clinic:${POSTGRES_PASSWORD}@postgres:5432/clinic
+      CLINIC_DATA_KEY: ${CLINIC_DATA_KEY}
+      TEMPORAL_ADDRESS: temporal:7233
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minio}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${PUBLIC_URL}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      BROWSER_RUNNER_URL: http://browser-runner:4020
+      SANDBOX_EHR_URL: http://sandbox-ehr:4010
+      SANDBOX_PAYER_URL: http://sandbox-payer:4011
+      SEED_EMAIL: ${SEED_EMAIL:-staff@demo.clinic}
+      SEED_PASSWORD: ${SEED_PASSWORD:-password-demo-1}
+      PORT: 4000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      temporal:
+        condition: service_started
+    mem_limit: 384m
+
+  worker:
+    image: clinic-node:prod
+    restart: unless-stopped
+    pull_policy: never
+    command: ["pnpm", "--filter", "@clinic/api", "exec", "tsx", "src/worker.ts"]
+    environment:
+      DATABASE_URL: postgres://clinic_app:clinic_app@postgres:5432/clinic
+      DATABASE_URL_ADMIN: postgres://clinic:${POSTGRES_PASSWORD}@postgres:5432/clinic
+      CLINIC_DATA_KEY: ${CLINIC_DATA_KEY}
+      TEMPORAL_ADDRESS: temporal:7233
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minio}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      BROWSER_RUNNER_URL: http://browser-runner:4020
+      SANDBOX_EHR_URL: http://sandbox-ehr:4010
+      SANDBOX_PAYER_URL: http://sandbox-payer:4011
+      OUTREACH_WAIT_MS: 0
+    depends_on:
+      api:
+        condition: service_started
+      temporal:
+        condition: service_started
+    mem_limit: 256m
+
+  console:
+    image: clinic-node:prod
+    restart: unless-stopped
+    pull_policy: never
+    command: ["pnpm", "--filter", "@clinic/console", "start"]
+    environment:
+      API_INTERNAL_URL: http://api:4000
+    ports:
+      - "80:3000"
+    depends_on: [api]
+    mem_limit: 256m
+
+  sandbox-ehr:
+    image: clinic-sandbox:prod
+    restart: unless-stopped
+    build:
+      context: ..
+      dockerfile: infra/docker/sandbox.Dockerfile
+    command: ["python", "/ehr.py"]
+    mem_limit: 64m
+
+  sandbox-payer:
+    image: clinic-sandbox:prod
+    restart: unless-stopped
+    pull_policy: never
+    command: ["python", "/payer.py"]
+    mem_limit: 64m
+
+  browser-runner:
+    image: clinic-browser:prod
+    restart: unless-stopped
+    shm_size: "512mb"
+    build:
+      context: ..
+      dockerfile: infra/docker/browser.prod.Dockerfile
+    environment:
+      CLINIC_DATA_KEY: ${CLINIC_DATA_KEY}
+      API_URL: http://api:4000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      PORT: 4020
+    depends_on: [sandbox-ehr, sandbox-payer, api]
+    mem_limit: 512m
+
+  agent-worker:
+    image: clinic-agent:prod
+    restart: unless-stopped
+    build:
+      context: ..
+      dockerfile: infra/docker/agent.Dockerfile
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      BROWSER_RUNNER_URL: http://browser-runner:4020
+      FIXTURES_DIR: /fixtures/packets
+    depends_on: [temporal, browser-runner]
+    mem_limit: 256m
+
+volumes:
+  pg:
+  minio:
