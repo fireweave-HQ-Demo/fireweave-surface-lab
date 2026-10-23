@@ -28,7 +28,7 @@ exporters:
     endpoint: http://openobserve:5080/api/default
     headers:
       Authorization: "Basic YWRtaW5AZXhhbXBsZS5jb206Q2hhbmdlTWUxMjMh"
-      stream-name: default
+      stream-name: clinic
   otlphttp/hosted:
     endpoint: ${env:OO_OTLP_ENDPOINT}
     headers:

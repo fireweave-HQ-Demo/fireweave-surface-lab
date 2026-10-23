@@ -61,7 +61,7 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      packages: read
+      packages: write
     steps:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.2

@@ -17,7 +17,7 @@ function loadEnv() {
 const file = loadEnv();
 
 export const observe = {
-  endpoint: file.OO_OTLP_ENDPOINT,
+  endpoint: file.OO_QUERY_ENDPOINT || file.OO_OTLP_ENDPOINT,
   authorization: file.OO_AUTHORIZATION,
   stream: file.OO_STREAM || "clinic",
 };
@@ -89,7 +89,7 @@ export async function waitForTrace(
   const deadline = Date.now() + timeout;
   let last: Record<string, unknown>[] = [];
   while (Date.now() < deadline) {
-    const latest = await latestTraces(30);
+    const latest = await latestTraces(30).catch(() => ({ hits: [] }));
     const search = sql ? await searchTraces(sql).catch(() => ({ hits: [] })) : { hits: [] };
     last = [...(search.hits ?? []), ...(latest.hits ?? [])];
     if (last.some(match)) return last;

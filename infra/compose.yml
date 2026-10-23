@@ -76,8 +76,8 @@ services:
     env_file:
       - ../.env
     environment:
-      OO_OTLP_ENDPOINT: ${OO_OTLP_ENDPOINT}
-      OO_AUTHORIZATION: ${OO_AUTHORIZATION}
+      OO_OTLP_ENDPOINT: ${OO_OTLP_ENDPOINT:-http://openobserve:5080/api/default}
+      OO_AUTHORIZATION: ${OO_AUTHORIZATION:-Basic YWRtaW5AZXhhbXBsZS5jb206Q2hhbmdlTWUxMjMh}
       OO_STREAM: ${OO_STREAM:-clinic}
     volumes:
       - ./otel/collector.yaml:/etc/otel/collector.yaml:ro
