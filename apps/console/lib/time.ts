@@ -1,6 +1,6 @@
-export function ago(value?: string) {
+export function ago(value?: string, now = Date.now()) {
   if (!value) return "—";
-  const ms = Date.now() - new Date(value).getTime();
+  const ms = now - new Date(value).getTime();
   const min = Math.max(0, Math.round(ms / 60000));
   if (min < 1) return "just now";
   if (min < 60) return `${min} min ago`;

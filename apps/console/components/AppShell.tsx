@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { useCounts } from "../lib/counts";
+import { TickProvider } from "../lib/tick";
 import { Sidebar } from "./Sidebar";
 import { ToastProvider } from "./Toast";
 
@@ -59,10 +60,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   if (path === "/login" || path === "/signup") {
-    return <ToastProvider>{children}</ToastProvider>;
+    return (
+      <TickProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </TickProvider>
+    );
   }
 
   return (
+    <TickProvider>
     <ToastProvider>
       <div className="app">
         <Sidebar
@@ -77,5 +83,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main className="stage">{children}</main>
       </div>
     </ToastProvider>
+    </TickProvider>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Page, PageHeader } from "../../components/PageHeader";
+import { inFlight, listSignature } from "../../lib/list";
 
 type Referral = { id: string; patientName: string | null; status: string; triage: string | null };
 
@@ -17,15 +18,27 @@ export default function HubIndex() {
         return;
       }
       const all = (await res.json()) as Referral[];
-      if (!stop) setRows(all.filter((row) => row.status === "awaiting_review"));
+      const waiting = all.filter((row) => row.status === "awaiting_review");
+      if (stop) return;
+      setRows((prev) => (listSignature(prev) === listSignature(waiting) ? prev : waiting));
     }
     void load();
-    const timer = setInterval(() => void load(), 1000);
     return () => {
       stop = true;
-      clearInterval(timer);
     };
   }, []);
+
+  useEffect(() => {
+    if (!inFlight(rows)) return;
+    const timer = setInterval(async () => {
+      const res = await fetch("/api/referrals");
+      if (!res.ok) return;
+      const all = (await res.json()) as Referral[];
+      const waiting = all.filter((row) => row.status === "awaiting_review");
+      setRows((prev) => (listSignature(prev) === listSignature(waiting) ? prev : waiting));
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [rows]);
 
   return (
     <Page>

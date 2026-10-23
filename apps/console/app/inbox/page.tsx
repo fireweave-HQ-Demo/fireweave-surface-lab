@@ -15,6 +15,8 @@ import { TriagePill } from "../../components/TriagePill";
 import { useToast } from "../../components/Toast";
 import { COPY } from "../../lib/copy";
 import { ERROR_CODES } from "../../lib/errors";
+import { inFlight, listSignature } from "../../lib/list";
+import { useTick } from "../../lib/tick";
 import { ago } from "../../lib/time";
 import { pdfFiles, postReferral } from "../../lib/upload";
 
@@ -50,6 +52,7 @@ function nextLine(row: Referral) {
 }
 
 export default function InboxPage() {
+  const now = useTick();
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<Referral[] | null>(null);
@@ -71,14 +74,19 @@ export default function InboxPage() {
       return;
     }
     if (!res.ok) return;
-    setRows(await res.json());
+    const next = (await res.json()) as Referral[];
+    setRows((prev) => (prev && listSignature(prev) === listSignature(next) ? prev : next));
   }
 
   useEffect(() => {
     void load();
-    const timer = setInterval(() => void load(), 1000);
-    return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!rows || !inFlight(rows)) return;
+    const timer = setInterval(() => void load(), 5000);
+    return () => clearInterval(timer);
+  }, [rows]);
 
   useEffect(() => {
     if (!openId) return;
@@ -290,7 +298,7 @@ export default function InboxPage() {
                       <ConfidenceBar value={row.confidence ?? null} />
                     </td>
                     <td className="mono muted" title={row.createdAt}>
-                      {ago(row.createdAt)}
+                      {ago(row.createdAt, now)}
                     </td>
                     <td>
                       {ready ? (

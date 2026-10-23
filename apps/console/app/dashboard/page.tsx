@@ -8,6 +8,7 @@ import { Page, PageHeader } from "../../components/PageHeader";
 import { StatusPill } from "../../components/StatusPill";
 import { useToast } from "../../components/Toast";
 import { ERROR_CODES } from "../../lib/errors";
+import { useTick } from "../../lib/tick";
 import { ago, clock, todayLabel } from "../../lib/time";
 import { pdfFiles, postReferral } from "../../lib/upload";
 
@@ -32,6 +33,7 @@ type Referral = {
 type Audit = { id: string; action: string; subjectId: string; actor: string; createdAt?: string };
 
 export default function DashboardPage() {
+  const now = useTick();
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -153,7 +155,7 @@ export default function DashboardPage() {
               <span className="patient">{row.patientName ?? row.filename}</span>
               <StatusPill status={row.status} />
               <span className="muted">—</span>
-              <span className="mono muted">{ago(row.createdAt)}</span>
+              <span className="mono muted">{ago(row.createdAt, now)}</span>
               <ChevronRight size={16} aria-hidden="true" />
             </a>
           ))
@@ -168,7 +170,7 @@ export default function DashboardPage() {
               <span className="live pulse">
                 <i />
               </span>
-              <span className="muted">Writing chart · {ago(row.createdAt)}</span>
+              <span className="muted">Writing chart · {ago(row.createdAt, now)}</span>
               <span />
               <ChevronRight size={16} aria-hidden="true" />
             </a>
