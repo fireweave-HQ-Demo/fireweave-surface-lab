@@ -15,6 +15,7 @@ import { TriagePill } from "../../components/TriagePill";
 import { useToast } from "../../components/Toast";
 import { COPY } from "../../lib/copy";
 import { ERROR_CODES } from "../../lib/errors";
+import { useCounts } from "../../lib/counts";
 import { inFlight, listSignature } from "../../lib/list";
 import { useTick } from "../../lib/tick";
 import { ago } from "../../lib/time";
@@ -53,6 +54,7 @@ function nextLine(row: Referral) {
 
 export default function InboxPage() {
   const now = useTick();
+  const { setInboxRows } = useCounts();
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<Referral[] | null>(null);
@@ -81,6 +83,10 @@ export default function InboxPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    if (rows) setInboxRows(rows);
+  }, [rows, setInboxRows]);
 
   useEffect(() => {
     if (!rows || !inFlight(rows)) return;

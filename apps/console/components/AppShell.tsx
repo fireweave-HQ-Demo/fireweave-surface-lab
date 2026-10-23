@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { useCounts } from "../lib/counts";
+import { CountsProvider, useCounts } from "../lib/counts";
 import { TickProvider } from "../lib/tick";
 import { Sidebar } from "./Sidebar";
 import { ToastProvider } from "./Toast";
@@ -16,7 +16,6 @@ function titleCaseRole(role: string) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname();
-  const { counts } = useCounts();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [clinicName, setClinicName] = useState("");
   const [role, setRole] = useState("Staff");
@@ -69,20 +68,45 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <TickProvider>
-    <ToastProvider>
-      <div className="app">
-        <Sidebar
-          path={path}
-          inboxCount={counts.inbox}
-          paCount={counts.priorAuth}
-          clinicName={clinicName}
-          userName={user?.name ?? ""}
-          role={role}
-          onSignOut={() => void signOut()}
-        />
-        <main className="stage">{children}</main>
-      </div>
-    </ToastProvider>
+      <ToastProvider>
+        <CountsProvider>
+          <AppChrome path={path} clinicName={clinicName} userName={user?.name ?? ""} role={role} onSignOut={() => void signOut()}>
+            {children}
+          </AppChrome>
+        </CountsProvider>
+      </ToastProvider>
     </TickProvider>
+  );
+}
+
+function AppChrome({
+  children,
+  path,
+  clinicName,
+  userName,
+  role,
+  onSignOut,
+}: {
+  children: ReactNode;
+  path: string;
+  clinicName: string;
+  userName: string;
+  role: string;
+  onSignOut: () => void;
+}) {
+  const { counts } = useCounts();
+  return (
+    <div className="app">
+      <Sidebar
+        path={path}
+        inboxCount={counts.inbox}
+        paCount={counts.priorAuth}
+        clinicName={clinicName}
+        userName={userName}
+        role={role}
+        onSignOut={onSignOut}
+      />
+      <main className="stage">{children}</main>
+    </div>
   );
 }

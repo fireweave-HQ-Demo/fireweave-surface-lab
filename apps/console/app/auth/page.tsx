@@ -9,6 +9,7 @@ import { Page, PageHeader } from "../../components/PageHeader";
 import { Skeleton } from "../../components/Skeleton";
 import { StatusPill } from "../../components/StatusPill";
 import { useToast } from "../../components/Toast";
+import { useCounts } from "../../lib/counts";
 import { COPY } from "../../lib/copy";
 import { ERROR_CODES } from "../../lib/errors";
 
@@ -48,6 +49,7 @@ const chips = [
 ] as const;
 
 export default function PriorAuthPage() {
+  const { setPriorAuthRows } = useCounts();
   const toast = useToast();
   const [referrals, setReferrals] = useState<Referral[] | null>(null);
   const [auths, setAuths] = useState<Auth[] | null>(null);
@@ -71,6 +73,10 @@ export default function PriorAuthPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    if (auths) setPriorAuthRows(auths.map((row) => ({ status: row.status, missing: gaps(row) })));
+  }, [auths, setPriorAuthRows]);
 
   async function draft(referralId: string) {
     setDrafting(referralId);
