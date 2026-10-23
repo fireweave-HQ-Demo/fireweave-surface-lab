@@ -1,0 +1,22 @@
+{
+  "filename": "gi-incomplete.pdf",
+  "patientName": "Blair Quinn",
+  "dob": "1979-11-02",
+  "reason": "rectal bleeding",
+  "payer": "",
+  "confidence": 0.82,
+  "sections": [
+    {
+      "kind": "referral",
+      "pageStart": 1,
+      "pageEnd": 1,
+      "summary": "Referral form"
+    }
+  ],
+  "memberId": "",
+  "phone": "530-555-0198",
+  "serviceArea": "in",
+  "lastColonoscopy": "none",
+  "cpt": "45378",
+  "diagnosis": "CODE"
+}

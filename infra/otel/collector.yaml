@@ -1,0 +1,51 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+  redaction:
+    allow_all_keys: true
+    blocked_values:
+      - '\d{3}-\d{2}-\d{4}'
+    blocked_key_patterns:
+      - patient_name
+      - dob
+      - address
+      - member_id
+      - transcript
+      - prompt
+      - completion
+      - pdf_text
+      - audio
+
+exporters:
+  otlphttp/local:
+    endpoint: http://openobserve:5080/api/default
+    headers:
+      Authorization: "Basic YWRtaW5AZXhhbXBsZS5jb206Q2hhbmdlTWUxMjMh"
+      stream-name: default
+  otlphttp/hosted:
+    endpoint: ${env:OO_OTLP_ENDPOINT}
+    headers:
+      Authorization: "${env:OO_AUTHORIZATION}"
+      stream-name: "${env:OO_STREAM}"
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [redaction, batch]
+      exporters: [otlphttp/local, otlphttp/hosted]
+    logs:
+      receivers: [otlp]
+      processors: [redaction, batch]
+      exporters: [otlphttp/local, otlphttp/hosted]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/local, otlphttp/hosted]

@@ -1,0 +1,7 @@
+[project]
+name = "clinic-os"
+version = "0.0.0"
+requires-python = ">=3.12"
+
+[tool.uv.workspace]
+members = ["apps/agent-worker", "apps/browser-runner", "apps/voice-worker"]

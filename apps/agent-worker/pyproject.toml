@@ -1,0 +1,5 @@
+[project]
+name = "clinic-agent-worker"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = ["temporalio>=1.9"]

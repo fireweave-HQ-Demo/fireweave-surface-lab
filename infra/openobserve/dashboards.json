@@ -1,0 +1,7 @@
+[
+  {"title": "API", "queries": ["http_server_duration_seconds"]},
+  {"title": "Workflows", "queries": ["workflow_failed_total", "referral_disposition_total", "approval_wait_seconds"]},
+  {"title": "Browsers", "queries": ["browser_sessions_active", "browser_act_duration_seconds"]},
+  {"title": "Voice", "queries": ["voice_call_total", "voice_call_duration_seconds"]},
+  {"title": "Pipeline", "queries": ["extract_duration_seconds", "model_duration_seconds"]}
+]

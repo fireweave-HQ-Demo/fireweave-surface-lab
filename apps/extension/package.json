@@ -1,0 +1,6 @@
+{
+  "name": "@clinic/extension",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Chrome side panel placeholder. The panel is a later phase."
+}

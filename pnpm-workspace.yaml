@@ -1,0 +1,13 @@
+packages:
+  - apps/*
+  - packages/*
+
+dangerouslyAllowAllBuilds: true
+
+allowBuilds:
+  "@swc/core": true
+  "@temporalio/core-bridge": true
+  esbuild: true
+  protobufjs: true
+  sharp: true
+  unrs-resolver: true

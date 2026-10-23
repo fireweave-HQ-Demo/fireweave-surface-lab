@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clinic OS — synopsis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;650;750&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper: #f7f5f0;
+        --paper-deep: #efebe2;
+        --ink: #121a16;
+        --viridian: #1e3d36;
+        --mist: #ddd8cc;
+        --blue: #2447f5;
+        --stat: #c2410c;
+        --ok: #1f7a55;
+        --body: #35423c;
+        --muted: #6b7770;
+        --card: #fff;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; }
+      body {
+        background:
+          radial-gradient(circle at top, rgba(30, 61, 54, 0.08), transparent 36%),
+          var(--paper);
+        color: var(--body);
+        font-family: "Instrument Sans", "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+      h1, h2, h3 {
+        font-family: "Bricolage Grotesque", Georgia, serif;
+        color: var(--ink);
+        letter-spacing: -0.04em;
+        margin: 0;
+      }
+      .eyebrow {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--viridian);
+        margin: 0 0 8px;
+      }
+      .eyebrow::before {
+        content: "";
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        background: var(--blue);
+        margin-right: 8px;
+      }
+      .hero {
+        background: var(--viridian);
+        color: #f7f5f0;
+        padding: 72px 8vw 64px;
+      }
+      .hero .eyebrow { color: #9ec9b8; }
+      .hero .eyebrow::before { background: #45d48e; }
+      .hero h1 { color: #f7f5f0; font-size: clamp(42px, 7vw, 84px); line-height: 0.95; max-width: 16ch; }
+      .hero p { max-width: 58ch; font-size: 20px; color: #d7e2dc; }
+      .wrap { width: min(860px, 92vw); margin: 0 auto; padding: 56px 0 24px; }
+      .jobs { display: grid; gap: 16px; margin-top: 22px; }
+      .card {
+        background: var(--card);
+        border: 1.5px solid var(--ink);
+        border-radius: 16px;
+        box-shadow: 6px 6px 0 var(--paper-deep);
+        padding: 24px;
+      }
+      .card h3 { font-size: 28px; }
+      .card .how { color: var(--muted); margin: 8px 0 0; }
+      .card ol { margin: 14px 0 0; padding-left: 18px; }
+      .card li { margin: 8px 0; }
+      .lede { max-width: 62ch; margin: 8px 0 0; }
+      h2 { font-size: 36px; }
+      footer { padding: 8px 8vw 64px; color: var(--muted); }
+      @media (max-width: 900px) {
+        .hero { padding: 40px 6vw; }
+        .card h3 { font-size: 24px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <p class="eyebrow">Clinic OS</p>
+      <h1>A clinic fax desk, not a chatbot.</h1>
+      <p>
+        You drop a referral PDF. The system reads it. Rules decide if it is ready. A human hits Looks good.
+        Then a browser writes the chart, books a slot, and logs the follow-up call.
+      </p>
+    </header>
+
+    <main class="wrap">
+      <p class="eyebrow">The path</p>
+      <h2>How each step runs</h2>
+      <p class="lede">
+        One Temporal workflow, ReferralFlow, owns extract through the call. Prior auth and scribe use the same write gate after a completed referral.
+      </p>
+      <div class="jobs">
+        <article class="card">
+          <p class="eyebrow">01</p>
+          <h3>Drop the fax</h3>
+          <p class="how">Staff upload a hospital PDF. Same file for the same clinic does not start again.</p>
+          <ol>
+            <li>Bytes land in MinIO. A Temporal run starts as extracting.</li>
+            <li>We read the official Stanford GI form fields and the NLM lab page: name, birthday, why they were sent, insurance, phone.</li>
+            <li>Form labels are ignored. A blank hospital template or a junk file says could not read this fax.</li>
+          </ol>
+        </article>
+        <article class="card">
+          <p class="eyebrow">02</p>
+          <h3>Rules pick the next step</h3>
+          <p class="how">The card speaks English. Missing pieces never reach the chart.</p>
+          <ol>
+            <li>Ready → Ready for you. Person reviews.</li>
+            <li>Missing labs or insurance → Send it back, and names what is missing.</li>
+            <li>Outside the service area → stop. Unknown reason → needs a person.</li>
+          </ol>
+        </article>
+        <article class="card">
+          <p class="eyebrow">03</p>
+          <h3>Looks good writes the chart</h3>
+          <p class="how">Nothing hits the record without a human token.</p>
+          <ol>
+            <li>Looks good mints a 15-minute HMAC token. The browser never sees it.</li>
+            <li>The runner checks the signature and consumes the token. A save without it is refused.</li>
+            <li>A headless browser types name and birthday on the sandbox chart and clicks Save.</li>
+          </ol>
+        </article>
+        <article class="card">
+          <p class="eyebrow">04</p>
+          <h3>Book the slot</h3>
+          <p class="how">Payer decides the doctor and the time of day.</p>
+          <ol>
+            <li>Cigna PPO routes to Dr. Patel in the morning. The next open slot is reserved.</li>
+            <li>The same browser fill writes provider, day, and slot on the sandbox calendar.</li>
+            <li>Avery Quinn books 08:00. A full board fails instead of double-booking.</li>
+          </ol>
+        </article>
+        <article class="card">
+          <p class="eyebrow">05</p>
+          <h3>Log the follow-up call</h3>
+          <p class="how">Every patient is called. The first line is the disclosure.</p>
+          <ol>
+            <li>The script starts with “This call is automated and recorded.”</li>
+            <li>A number ending in 0000 is no-answer on the first try, then answered on the second.</li>
+            <li>This is a recorded result on the session, not a live phone line.</li>
+          </ol>
+        </article>
+        <article class="card">
+          <p class="eyebrow">06</p>
+          <h3>Prior auth, if needed</h3>
+          <p class="how">Draft what the payer needs. Submit only when the yellow list is empty.</p>
+          <ol>
+            <li>A completed referral opens as a draft with CPT, diagnosis, and the booked date.</li>
+            <li>Empty CPT blocks submit. A complete draft is typed into the sandbox payer and returns AUTH-.</li>
+            <li>Same write gate as the chart. A denial path is not wired yet.</li>
+          </ol>
+        </article>
+        <article class="card">
+          <p class="eyebrow">07</p>
+          <h3>Scribe the visit</h3>
+          <p class="how">The visit is text. The note waits for the same yes.</p>
+          <ol>
+            <li>Staff paste a transcript and a name. The desk drafts an H&amp;P.</li>
+            <li>Looks good mints another token. The runner writes the note onto the sandbox chart.</li>
+            <li>Audio capture and a live room are not in this build.</li>
+          </ol>
+        </article>
+      </div>
+    </main>
+    <footer>
+      Sandbox EHR, not Epic. Drop <code>fixtures/referrals/gi-stat.pdf</code> at
+      <a href="http://127.0.0.1:13000">http://127.0.0.1:13000</a>
+      — Avery Quinn, STAT, Ready for you.
+    </footer>
+  </body>
+</html>
