@@ -2,6 +2,7 @@
 
 import { Calendar, FileCheck, Inbox, LayoutDashboard, Mic, Settings, Sliders } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCounts } from "../lib/counts";
 import { Button } from "./Button";
@@ -39,11 +40,11 @@ function NavItem({
   badge?: number;
 }) {
   return (
-    <a href={href} className="nav-item" aria-current={current ? "page" : undefined}>
+    <Link href={href} className="nav-item" aria-current={current ? "page" : undefined}>
       <Icon className="nav-icon" size={16} aria-hidden="true" />
       <span>{label}</span>
       {badge ? <span className="badge">{badge}</span> : null}
-    </a>
+    </Link>
   );
 }
 
@@ -87,9 +88,9 @@ export function Sidebar({ clinicName, userName, role }: Props) {
         ))}
       </div>
       <div className="sidebar-foot">
-        <a className="btn btn-ghost btn-sm" href="/help">
+        <Link className="btn btn-ghost btn-sm" href="/help">
           Help
-        </a>
+        </Link>
         <Button variant="ghost" size="sm" onClick={() => void signOut()}>
           Sign out
         </Button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../components/Button";
 import { EmptyState } from "../../../components/EmptyState";
@@ -144,7 +145,7 @@ export default function DashboardPage() {
       <div className="card stack section">
         <div className="section-head">
           <h2>Needs your attention</h2>
-          <a href="/inbox">View all →</a>
+          <Link href="/inbox">View all →</Link>
         </div>
         {attention.length === 0 ? (
           <EmptyState
@@ -157,13 +158,13 @@ export default function DashboardPage() {
           />
         ) : (
           attention.map((row) => (
-            <a className="attn-row" key={row.id} href="/inbox">
+            <Link className="attn-row" key={row.id} href="/inbox">
               <span className="patient">{row.patientName ?? row.filename}</span>
               <StatusPill status={row.status} />
               <span className="muted">—</span>
               <span className="mono muted">{ago(row.createdAt, now)}</span>
               <ChevronRight size={16} aria-hidden="true" />
-            </a>
+            </Link>
           ))
         )}
       </div>
@@ -171,7 +172,7 @@ export default function DashboardPage() {
         <div className="card stack section">
           <h2>Writes in flight</h2>
           {writing.map((row) => (
-            <a className="attn-row" key={row.id} href={`/sessions/${row.sessionId}`}>
+            <Link className="attn-row" key={row.id} href={`/sessions/${row.sessionId}`}>
               <span className="patient">{row.patientName}</span>
               <span className="live pulse">
                 <i />
@@ -179,7 +180,7 @@ export default function DashboardPage() {
               <span className="muted">Writing chart · {ago(row.createdAt, now)}</span>
               <span />
               <ChevronRight size={16} aria-hidden="true" />
-            </a>
+            </Link>
           ))}
         </div>
       ) : null}

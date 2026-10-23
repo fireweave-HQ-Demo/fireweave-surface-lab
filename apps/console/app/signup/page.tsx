@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "../../components/Button";
 import { COPY } from "../../lib/copy";
@@ -101,9 +102,9 @@ export default function SignupPage() {
         </Button>
         <div className="switch">
           <span className="muted">Already have a desk?</span>
-          <a className="btn btn-ghost btn-md" href="/login">
+          <Link className="btn btn-ghost btn-md" href="/login">
             Sign in
-          </a>
+          </Link>
         </div>
       </form>
     </div>

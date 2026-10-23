@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Button, IconButton } from "./Button";
 import { Drawer } from "./Drawer";
@@ -142,7 +143,7 @@ export function ScheduleGrid() {
             <div>
               <label>Booked via</label>
               <div className="val">
-                <a href="/inbox">Referral</a>
+                <Link href="/inbox">Referral</Link>
               </div>
             </div>
             <div>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Page, PageHeader } from "../../../components/PageHeader";
 import { inFlight, listSignature } from "../../../lib/list";
@@ -45,10 +46,10 @@ export default function HubIndex() {
       <PageHeader title="Patient hub" subtitle="These people are waiting for a yes." />
       {rows.length === 0 ? <p className="muted">Nothing is waiting for review.</p> : null}
       {rows.map((row) => (
-        <a className="attn-row" key={row.id} href={`/hub/${row.id}`}>
+        <Link className="attn-row" key={row.id} href={`/hub/${row.id}`}>
           <strong>{row.patientName}</strong>
           <div className="muted">{row.triage || "Ready for you"}</div>
-        </a>
+        </Link>
       ))}
     </Page>
   );
