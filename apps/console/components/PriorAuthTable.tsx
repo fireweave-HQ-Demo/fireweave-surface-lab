@@ -1,17 +1,17 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { Banner } from "../../components/Banner";
-import { Button } from "../../components/Button";
-import { Drawer } from "../../components/Drawer";
-import { EmptyState } from "../../components/EmptyState";
-import { Page, PageHeader } from "../../components/PageHeader";
-import { Skeleton } from "../../components/Skeleton";
-import { StatusPill } from "../../components/StatusPill";
-import { useToast } from "../../components/Toast";
-import { useCounts } from "../../lib/counts";
-import { COPY } from "../../lib/copy";
-import { ERROR_CODES } from "../../lib/errors";
+import { Banner } from "./Banner";
+import { Button } from "./Button";
+import { Drawer } from "./Drawer";
+import { EmptyState } from "./EmptyState";
+import { Page, PageHeader } from "./PageHeader";
+import { Skeleton } from "./Skeleton";
+import { StatusPill } from "./StatusPill";
+import { useToast } from "./Toast";
+import { useCounts } from "../lib/counts";
+import { COPY } from "../lib/copy";
+import { ERROR_CODES } from "../lib/errors";
 
 type Referral = { id: string; patientName: string | null };
 type Auth = {
@@ -48,7 +48,7 @@ const chips = [
   ["denied", "Denied"],
 ] as const;
 
-export default function PriorAuthPage() {
+export function PriorAuthTable() {
   const { setPriorAuthRows } = useCounts();
   const toast = useToast();
   const [referrals, setReferrals] = useState<Referral[] | null>(null);

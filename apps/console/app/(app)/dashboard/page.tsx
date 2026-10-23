@@ -2,15 +2,16 @@
 
 import { ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Button } from "../../components/Button";
-import { EmptyState } from "../../components/EmptyState";
-import { Page, PageHeader } from "../../components/PageHeader";
-import { StatusPill } from "../../components/StatusPill";
-import { useToast } from "../../components/Toast";
-import { ERROR_CODES } from "../../lib/errors";
-import { useTick } from "../../lib/tick";
-import { ago, clock, todayLabel } from "../../lib/time";
-import { pdfFiles, postReferral } from "../../lib/upload";
+import { Button } from "../../../components/Button";
+import { EmptyState } from "../../../components/EmptyState";
+import { Page, PageHeader } from "../../../components/PageHeader";
+import { StatusPill } from "../../../components/StatusPill";
+import { useToast } from "../../../components/Toast";
+import { useCounts } from "../../../lib/counts";
+import { ERROR_CODES } from "../../../lib/errors";
+import { useTick } from "../../../lib/tick";
+import { ago, clock, todayLabel } from "../../../lib/time";
+import { pdfFiles, postReferral } from "../../../lib/upload";
 
 type Summary = {
   completed: number;
@@ -34,6 +35,7 @@ type Audit = { id: string; action: string; subjectId: string; actor: string; cre
 
 export default function DashboardPage() {
   const now = useTick();
+  const { setInboxRows } = useCounts();
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -50,7 +52,11 @@ export default function DashboardPage() {
       }
       if (dash.ok) setSummary(await dash.json());
       const list = await fetch("/api/referrals");
-      if (list.ok) setRows(await list.json());
+      if (list.ok) {
+        const next = (await list.json()) as Referral[];
+        setRows(next);
+        setInboxRows(next);
+      }
       const log = await fetch("/api/audit");
       if (log.ok) setAudit(await log.json());
     })();

@@ -2,13 +2,13 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Button, IconButton } from "../../components/Button";
-import { Drawer } from "../../components/Drawer";
-import { EmptyState } from "../../components/EmptyState";
-import { Page, PageHeader } from "../../components/PageHeader";
-import { Skeleton } from "../../components/Skeleton";
-import { StatusPill } from "../../components/StatusPill";
-import { weekRange } from "../../lib/time";
+import { Button, IconButton } from "./Button";
+import { Drawer } from "./Drawer";
+import { EmptyState } from "./EmptyState";
+import { Page, PageHeader } from "./PageHeader";
+import { Skeleton } from "./Skeleton";
+import { StatusPill } from "./StatusPill";
+import { weekRange } from "../lib/time";
 
 type Appointment = { id: string; patientName: string; provider: string; day: string; slot: string; timeOfDay: string; referralId?: string };
 
@@ -19,7 +19,7 @@ const hours = Array.from({ length: 21 }, (_, index) => {
   return `${String(hour).padStart(2, "0")}:${minute}`;
 });
 
-export default function SchedulePage() {
+export function ScheduleGrid() {
   const [rows, setRows] = useState<Appointment[] | null>(null);
   const [provider, setProvider] = useState("all");
   const [open, setOpen] = useState<Appointment | null>(null);

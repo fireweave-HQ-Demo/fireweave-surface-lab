@@ -1,4 +1,4 @@
-import { Page, PageHeader } from "../../components/PageHeader";
+import { Page, PageHeader } from "../../../components/PageHeader";
 
 export default function HelpPage() {
   return (

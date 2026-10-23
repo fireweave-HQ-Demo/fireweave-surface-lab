@@ -2,13 +2,13 @@
 
 import { Pause } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Banner } from "../../../components/Banner";
-import { Button, IconButton } from "../../../components/Button";
-import { Page, PageHeader } from "../../../components/PageHeader";
-import { StatusPill } from "../../../components/StatusPill";
-import { useToast } from "../../../components/Toast";
-import { COPY } from "../../../lib/copy";
-import { ERROR_CODES } from "../../../lib/errors";
+import { Banner } from "../../../../components/Banner";
+import { Button, IconButton } from "../../../../components/Button";
+import { Page, PageHeader } from "../../../../components/PageHeader";
+import { StatusPill } from "../../../../components/StatusPill";
+import { useToast } from "../../../../components/Toast";
+import { COPY } from "../../../../lib/copy";
+import { ERROR_CODES } from "../../../../lib/errors";
 
 type EventRow = { id: string; message: string; createdAt?: string };
 type Session = { id: string; status: string; referralId?: string; createdAt?: string };

@@ -2,16 +2,14 @@
 
 import { Calendar, FileCheck, Inbox, LayoutDashboard, Mic, Settings, Sliders } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useCounts } from "../lib/counts";
 import { Button } from "./Button";
 
 type Props = {
-  path: string;
-  inboxCount: number;
-  paCount: number;
   clinicName: string;
   userName: string;
   role: string;
-  onSignOut: () => void;
 };
 
 const today: Array<{ href: string; label: string; icon: LucideIcon; badge?: "inbox" | "pa" }> = [
@@ -49,8 +47,15 @@ function NavItem({
   );
 }
 
-export function Sidebar({ path, inboxCount, paCount, clinicName, userName, role, onSignOut }: Props) {
+export function Sidebar({ clinicName, userName, role }: Props) {
+  const path = usePathname();
+  const { counts } = useCounts();
   const active = (href: string) => path === href || path.startsWith(`${href}/`) || (href === "/auth" && path.startsWith("/prior-auth"));
+
+  async function signOut() {
+    await fetch("/api/auth/sign-out", { method: "POST" });
+    window.location.href = "/login";
+  }
 
   return (
     <aside className="sidebar">
@@ -71,7 +76,7 @@ export function Sidebar({ path, inboxCount, paCount, clinicName, userName, role,
             label={item.label}
             icon={item.icon}
             current={active(item.href)}
-            badge={item.badge === "inbox" ? inboxCount : item.badge === "pa" ? paCount : undefined}
+            badge={item.badge === "inbox" ? counts.inbox : item.badge === "pa" ? counts.priorAuth : undefined}
           />
         ))}
       </div>
@@ -85,7 +90,7 @@ export function Sidebar({ path, inboxCount, paCount, clinicName, userName, role,
         <a className="btn btn-ghost btn-sm" href="/help">
           Help
         </a>
-        <Button variant="ghost" size="sm" onClick={onSignOut}>
+        <Button variant="ghost" size="sm" onClick={() => void signOut()}>
           Sign out
         </Button>
       </div>

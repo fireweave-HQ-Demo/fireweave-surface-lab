@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "../../components/Button";
-import { Page, PageHeader } from "../../components/PageHeader";
-import { useToast } from "../../components/Toast";
+import { Button } from "./Button";
+import { Page, PageHeader } from "./PageHeader";
+import { useToast } from "./Toast";
 
 type Rules = {
   version?: number;
@@ -21,7 +21,7 @@ const tabs = [
   ["outreach", "Outreach"],
 ] as const;
 
-export default function RulesPage() {
+export function RulesForm() {
   const toast = useToast();
   const [tab, setTab] = useState<(typeof tabs)[number][0]>("docs");
   const [need, setNeed] = useState("");

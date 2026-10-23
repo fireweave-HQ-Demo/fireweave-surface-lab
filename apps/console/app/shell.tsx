@@ -1,1 +1,1 @@
-export { AppShell as Shell } from "../components/AppShell";
+export { Providers as Shell } from "../components/Providers";

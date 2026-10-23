@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "../../components/Button";
-import { EmptyState } from "../../components/EmptyState";
-import { Page, PageHeader } from "../../components/PageHeader";
-import { Skeleton } from "../../components/Skeleton";
-import { StatusPill } from "../../components/StatusPill";
+import { Button } from "./Button";
+import { EmptyState } from "./EmptyState";
+import { Page, PageHeader } from "./PageHeader";
+import { Skeleton } from "./Skeleton";
+import { StatusPill } from "./StatusPill";
 
 type Note = { id: string; patientName: string; draft: string; status: string };
 
-export default function ScribePage() {
+export function ScribeWorkspace() {
   const [note, setNote] = useState<Note | null>(null);
   const [recent, setRecent] = useState<Note[]>([]);
   const [error, setError] = useState("");

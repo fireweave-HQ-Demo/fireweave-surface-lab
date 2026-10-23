@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Banner } from "../../../components/Banner";
-import { Button } from "../../../components/Button";
-import { Page, PageHeader } from "../../../components/PageHeader";
-import { StatusPill } from "../../../components/StatusPill";
-import { COPY } from "../../../lib/copy";
-import { ERROR_CODES } from "../../../lib/errors";
+import { Banner } from "../../../../components/Banner";
+import { Button } from "../../../../components/Button";
+import { Page, PageHeader } from "../../../../components/PageHeader";
+import { StatusPill } from "../../../../components/StatusPill";
+import { COPY } from "../../../../lib/copy";
+import { ERROR_CODES } from "../../../../lib/errors";
 
 type Auth = {
   id: string;

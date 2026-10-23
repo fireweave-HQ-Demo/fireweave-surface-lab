@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Page, PageHeader } from "../../components/PageHeader";
-import { inFlight, listSignature } from "../../lib/list";
+import { Page, PageHeader } from "../../../components/PageHeader";
+import { inFlight, listSignature } from "../../../lib/list";
 
 type Referral = { id: string; patientName: string | null; status: string; triage: string | null };
 

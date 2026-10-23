@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "../../../components/Button";
-import { Page, PageHeader } from "../../../components/PageHeader";
-import { StatusPill } from "../../../components/StatusPill";
+import { Button } from "../../../../components/Button";
+import { Page, PageHeader } from "../../../../components/PageHeader";
+import { StatusPill } from "../../../../components/StatusPill";
 
 type Field = { name: string; value: string };
 type Payload = {

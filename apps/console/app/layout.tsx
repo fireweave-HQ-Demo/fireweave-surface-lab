@@ -1,7 +1,7 @@
 import "@clinic/ui/console.css";
 import "./globals.css";
 import type { ReactNode } from "react";
-import { AppShell } from "../components/AppShell";
+import { Providers } from "../components/Providers";
 
 export const metadata = { title: "Clinic OS" };
 
@@ -9,7 +9,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <AppShell>{children}</AppShell>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

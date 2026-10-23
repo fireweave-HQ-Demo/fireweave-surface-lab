@@ -2,24 +2,24 @@
 
 import { ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Banner } from "../../components/Banner";
-import { Button } from "../../components/Button";
-import { ConfidenceBar } from "../../components/ConfidenceBar";
-import { Drawer } from "../../components/Drawer";
-import { EmptyState } from "../../components/EmptyState";
-import { Modal } from "../../components/Modal";
-import { Page, PageHeader } from "../../components/PageHeader";
-import { Skeleton } from "../../components/Skeleton";
-import { StatusPill } from "../../components/StatusPill";
-import { TriagePill } from "../../components/TriagePill";
-import { useToast } from "../../components/Toast";
-import { COPY } from "../../lib/copy";
-import { ERROR_CODES } from "../../lib/errors";
-import { useCounts } from "../../lib/counts";
-import { inFlight, listSignature } from "../../lib/list";
-import { useTick } from "../../lib/tick";
-import { ago } from "../../lib/time";
-import { pdfFiles, postReferral } from "../../lib/upload";
+import { Banner } from "./Banner";
+import { Button } from "./Button";
+import { ConfidenceBar } from "./ConfidenceBar";
+import { Drawer } from "./Drawer";
+import { EmptyState } from "./EmptyState";
+import { Modal } from "./Modal";
+import { Page, PageHeader } from "./PageHeader";
+import { Skeleton } from "./Skeleton";
+import { StatusPill } from "./StatusPill";
+import { TriagePill } from "./TriagePill";
+import { useToast } from "./Toast";
+import { COPY } from "../lib/copy";
+import { ERROR_CODES } from "../lib/errors";
+import { useCounts } from "../lib/counts";
+import { inFlight, listSignature } from "../lib/list";
+import { useTick } from "../lib/tick";
+import { ago } from "../lib/time";
+import { pdfFiles, postReferral } from "../lib/upload";
 
 type Referral = {
   id: string;
@@ -52,7 +52,7 @@ function nextLine(row: Referral) {
   return "";
 }
 
-export default function InboxPage() {
+export function InboxTable() {
   const now = useTick();
   const { setInboxRows } = useCounts();
   const toast = useToast();
