@@ -380,12 +380,6 @@ button.primary:disabled, a.primary[aria-disabled="true"] {
   padding: 28px;
 }
 .auth-card h1 { font-size: 24px; margin: 0; }
-.auth-demo {
-  font-family: var(--font-mono), "IBM Plex Mono", monospace;
-  font-size: 12px;
-  color: var(--c-muted);
-  margin: 0;
-}
 .progress { display: grid; gap: 8px; padding: 0; margin: 0; }
 .progress li { list-style: none; color: var(--c-muted); font-size: 13px; }
 .progress li.on { color: var(--c-ok); font-weight: 650; }

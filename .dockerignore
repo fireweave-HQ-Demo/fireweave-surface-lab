@@ -9,3 +9,8 @@ test-results
 *.tsbuildinfo
 .turbo
 infra/.data
+.venv
+**/.venv
+.cursor
+e2e
+synopsis.html

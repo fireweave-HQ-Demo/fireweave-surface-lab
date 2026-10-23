@@ -31,7 +31,6 @@ export default function LoginPage() {
     <div className="auth">
       <form className="auth-card" onSubmit={onSubmit}>
         <h1>Sign in</h1>
-        <p className="auth-demo">staff@demo.clinic / password-demo-1</p>
         {error ? (
           <p className="banner error">
             {error}

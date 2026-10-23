@@ -25,11 +25,11 @@
     "drizzle-orm": "0.44.6",
     "hono": "4.9.9",
     "minio": "8.0.6",
-    "postgres": "3.4.7"
+    "postgres": "3.4.7",
+    "tsx": "4.20.5"
   },
   "devDependencies": {
     "@types/node": "24.5.2",
-    "tsx": "4.20.5",
     "typescript": "5.9.2"
   }
 }

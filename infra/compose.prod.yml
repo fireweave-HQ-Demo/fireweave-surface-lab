@@ -20,14 +20,13 @@ services:
     mem_limit: 256m
 
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    image: bitnamilegacy/minio:latest
     restart: unless-stopped
-    command: ["server", "/data"]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
-      - minio:/data
+      - minio:/bitnami/minio/data
     mem_limit: 128m
 
   temporal:
@@ -47,12 +46,13 @@ services:
     mem_limit: 512m
 
   api:
-    image: clinic-node:prod
+    image: ${CLINIC_NODE_IMAGE:-ghcr.io/fireweave-hq-demo/clinic-node:prod}
     restart: unless-stopped
+    pull_policy: never
     build:
       context: ..
       dockerfile: infra/docker/node.prod.Dockerfile
-    command: ["pnpm", "--filter", "@clinic/api", "exec", "tsx", "src/server.ts"]
+    command: ["./node_modules/.bin/tsx", "src/server.ts"]
     environment:
       DATABASE_URL: postgres://clinic_app:clinic_app@postgres:5432/clinic
       DATABASE_URL_ADMIN: postgres://clinic:${POSTGRES_PASSWORD}@postgres:5432/clinic
@@ -81,10 +81,10 @@ services:
     mem_limit: 384m
 
   worker:
-    image: clinic-node:prod
+    image: ${CLINIC_NODE_IMAGE:-ghcr.io/fireweave-hq-demo/clinic-node:prod}
     restart: unless-stopped
     pull_policy: never
-    command: ["pnpm", "--filter", "@clinic/api", "exec", "tsx", "src/worker.ts"]
+    command: ["./node_modules/.bin/tsx", "src/worker.ts"]
     environment:
       DATABASE_URL: postgres://clinic_app:clinic_app@postgres:5432/clinic
       DATABASE_URL_ADMIN: postgres://clinic:${POSTGRES_PASSWORD}@postgres:5432/clinic
@@ -107,11 +107,14 @@ services:
     mem_limit: 256m
 
   console:
-    image: clinic-node:prod
+    image: ${CLINIC_NODE_IMAGE:-ghcr.io/fireweave-hq-demo/clinic-node:prod}
     restart: unless-stopped
     pull_policy: never
-    command: ["pnpm", "--filter", "@clinic/console", "start"]
+    command: ["node", "apps/console/server.js"]
+    working_dir: /console
     environment:
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
       API_INTERNAL_URL: http://api:4000
     ports:
       - "80:3000"
@@ -119,8 +122,9 @@ services:
     mem_limit: 256m
 
   sandbox-ehr:
-    image: clinic-sandbox:prod
+    image: ${CLINIC_SANDBOX_IMAGE:-ghcr.io/fireweave-hq-demo/clinic-sandbox:prod}
     restart: unless-stopped
+    pull_policy: never
     build:
       context: ..
       dockerfile: infra/docker/sandbox.Dockerfile
@@ -128,14 +132,14 @@ services:
     mem_limit: 64m
 
   sandbox-payer:
-    image: clinic-sandbox:prod
+    image: ${CLINIC_SANDBOX_IMAGE:-ghcr.io/fireweave-hq-demo/clinic-sandbox:prod}
     restart: unless-stopped
     pull_policy: never
     command: ["python", "/payer.py"]
     mem_limit: 64m
 
   browser-runner:
-    image: clinic-browser:prod
+    image: ${CLINIC_BROWSER_IMAGE:-ghcr.io/fireweave-hq-demo/clinic-browser:prod}
     restart: unless-stopped
     shm_size: "512mb"
     build:
@@ -150,8 +154,9 @@ services:
     mem_limit: 512m
 
   agent-worker:
-    image: clinic-agent:prod
+    image: ${CLINIC_AGENT_IMAGE:-ghcr.io/fireweave-hq-demo/clinic-agent:prod}
     restart: unless-stopped
+    pull_policy: never
     build:
       context: ..
       dockerfile: infra/docker/agent.Dockerfile
@@ -159,7 +164,7 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       BROWSER_RUNNER_URL: http://browser-runner:4020
       FIXTURES_DIR: /fixtures/packets
-    depends_on: [temporal, browser-runner]
+    depends_on: [temporal]
     mem_limit: 256m
 
 volumes:

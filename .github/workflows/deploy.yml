@@ -9,14 +9,64 @@ concurrency:
   group: deploy-prod
   cancel-in-progress: true
 
+env:
+  NODE_IMAGE: ghcr.io/fireweave-hq-demo/clinic-node:prod
+  SANDBOX_IMAGE: ghcr.io/fireweave-hq-demo/clinic-sandbox:prod
+  BROWSER_IMAGE: ghcr.io/fireweave-hq-demo/clinic-browser:prod
+  AGENT_IMAGE: ghcr.io/fireweave-hq-demo/clinic-agent:prod
+
 jobs:
+  images:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/node.prod.Dockerfile
+          push: true
+          tags: ${{ env.NODE_IMAGE }}
+          cache-from: type=gha,scope=clinic-node
+          cache-to: type=gha,mode=max,scope=clinic-node
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/sandbox.Dockerfile
+          push: true
+          tags: ${{ env.SANDBOX_IMAGE }}
+          cache-from: type=gha,scope=clinic-sandbox
+          cache-to: type=gha,mode=max,scope=clinic-sandbox
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/agent.Dockerfile
+          push: true
+          tags: ${{ env.AGENT_IMAGE }}
+          cache-from: type=gha,scope=clinic-agent
+          cache-to: type=gha,mode=max,scope=clinic-agent
+
   deploy:
+    needs: images
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.2
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PUBLIC_URL: ${{ secrets.PUBLIC_URL }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
@@ -32,19 +82,21 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           timeout: 30s
-          command_timeout: 20m
-          envs: PUBLIC_URL,POSTGRES_PASSWORD,MINIO_ROOT_USER,MINIO_ROOT_PASSWORD,CLINIC_DATA_KEY,BETTER_AUTH_SECRET,INTERNAL_TOKEN,SEED_EMAIL,SEED_PASSWORD
+          command_timeout: 15m
+          envs: GH_TOKEN,PUBLIC_URL,POSTGRES_PASSWORD,MINIO_ROOT_USER,MINIO_ROOT_PASSWORD,CLINIC_DATA_KEY,BETTER_AUTH_SECRET,INTERNAL_TOKEN,SEED_EMAIL,SEED_PASSWORD
           script: |
             set -euo pipefail
             APP_DIR="$HOME/clinic-os"
+            ORIGIN="https://x-access-token:${GH_TOKEN}@github.com/fireweave-HQ-Demo/fireweave-test-repo.git"
             if [ ! -d "$APP_DIR/.git" ]; then
-              git clone --depth=1 --branch main https://github.com/fireweave-HQ-Demo/fireweave-test-repo.git "$APP_DIR"
+              git clone --depth=1 --branch main "$ORIGIN" "$APP_DIR"
             fi
             cd "$APP_DIR"
-            git remote set-url origin https://github.com/fireweave-HQ-Demo/fireweave-test-repo.git
+            git remote set-url origin "$ORIGIN"
             git fetch --depth=1 origin "+refs/heads/main:refs/remotes/origin/main"
             git checkout -B main origin/main
             git reset --hard origin/main
+            git remote set-url origin https://github.com/fireweave-HQ-Demo/fireweave-test-repo.git
             printf '%s\n' \
               "PUBLIC_URL=${PUBLIC_URL}" \
               "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" \
