@@ -134,6 +134,7 @@ services:
       MINIO_PORT: 9000
       MINIO_ACCESS_KEY: minio
       MINIO_SECRET_KEY: minio12345
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OUTREACH_WAIT_MS: 0
     depends_on:
       api:

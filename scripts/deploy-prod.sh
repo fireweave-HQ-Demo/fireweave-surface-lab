@@ -20,13 +20,18 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   exit 1
 fi
 
-SERVICES="postgres minio temporal api worker console sandbox-ehr sandbox-payer agent-worker"
+COLLECTOR_IMAGE=otel/opentelemetry-collector-contrib:0.128.0
+if ! docker image inspect "$COLLECTOR_IMAGE" >/dev/null 2>&1; then
+  docker pull "$COLLECTOR_IMAGE"
+fi
+
+SERVICES="postgres minio temporal otel-collector api worker console sandbox-ehr sandbox-payer agent-worker"
 if docker image inspect ghcr.io/fireweave-hq-demo/clinic-browser:prod >/dev/null 2>&1; then
   SERVICES="$SERVICES browser-runner"
 fi
 
 dc up -d --remove-orphans --no-build --pull never $SERVICES
-dc up -d --no-build --pull never --force-recreate console api worker
+dc up -d --no-build --pull never --force-recreate otel-collector api worker console
 
 for _ in $(seq 1 30); do
   if curl -fsS --max-time 2 "http://127.0.0.1/login" >/dev/null 2>&1; then

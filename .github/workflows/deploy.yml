@@ -49,14 +49,18 @@ jobs:
           INTERNAL_TOKEN: ${{ secrets.INTERNAL_TOKEN }}
           SEED_EMAIL: ${{ secrets.SEED_EMAIL }}
           SEED_PASSWORD: ${{ secrets.SEED_PASSWORD }}
+          OO_OTLP_ENDPOINT: ${{ secrets.OO_OTLP_ENDPOINT }}
+          OO_QUERY_ENDPOINT: ${{ secrets.OO_QUERY_ENDPOINT }}
+          OO_AUTHORIZATION: ${{ secrets.OO_AUTHORIZATION }}
+          OO_STREAM: ${{ secrets.OO_STREAM }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           timeout: 20s
-          command_timeout: 120s
-          envs: GH_TOKEN,PUBLIC_URL,POSTGRES_PASSWORD,MINIO_ROOT_USER,MINIO_ROOT_PASSWORD,CLINIC_DATA_KEY,BETTER_AUTH_SECRET,INTERNAL_TOKEN,SEED_EMAIL,SEED_PASSWORD
+          command_timeout: 180s
+          envs: GH_TOKEN,PUBLIC_URL,POSTGRES_PASSWORD,MINIO_ROOT_USER,MINIO_ROOT_PASSWORD,CLINIC_DATA_KEY,BETTER_AUTH_SECRET,INTERNAL_TOKEN,SEED_EMAIL,SEED_PASSWORD,OO_OTLP_ENDPOINT,OO_QUERY_ENDPOINT,OO_AUTHORIZATION,OO_STREAM
           script: |
             set -euo pipefail
             APP_DIR="$HOME/clinic-assistent"
@@ -81,6 +85,10 @@ jobs:
               "INTERNAL_TOKEN=${INTERNAL_TOKEN}" \
               "SEED_EMAIL=${SEED_EMAIL}" \
               "SEED_PASSWORD=${SEED_PASSWORD}" \
+              "OO_OTLP_ENDPOINT=${OO_OTLP_ENDPOINT}" \
+              "OO_QUERY_ENDPOINT=${OO_QUERY_ENDPOINT}" \
+              "OO_AUTHORIZATION=${OO_AUTHORIZATION}" \
+              "OO_STREAM=${OO_STREAM:-clinic}" \
               > .env
             chmod 600 .env
             chmod +x scripts/deploy-prod.sh
