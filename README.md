@@ -24,7 +24,7 @@ Three laptop stacks share `infra/compose.yml` and stay isolated by `infra/env/de
 | Clinic | Demo GI | Stage GI | Prod GI |
 | OpenObserve | http://127.0.0.1:15080 | http://127.0.0.1:25080 | http://127.0.0.1:35080 |
 
-Password for all three is `password-demo-1`. `make down`, `make stage-down`, and `make prod-sim-down` stop one stack and keep its volumes.
+Password for all three is `password-demo-1`. `make seed` also adds 100 accounts in that env's email groups: `desk` / `nursing` / `physicians` / `billing` at `dev.clinic`, `intake` / `clinical` / `providers` / `revenue` at `stage.clinic`, and `frontdesk` / `care` / `attendings` / `claims` at `prod.clinic`. Example: `desk.01@dev.clinic`. The physician, provider, and attending groups are doctors. `make down`, `make stage-down`, and `make prod-sim-down` stop one stack and keep its volumes.
 
 ## EC2
 

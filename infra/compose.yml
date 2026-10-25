@@ -111,6 +111,10 @@ services:
       SEED_EMAIL: ${SEED_EMAIL:-staff@demo.clinic}
       SEED_PASSWORD: ${SEED_PASSWORD:-password-demo-1}
       SEED_CLINIC_NAME: ${SEED_CLINIC_NAME:-Demo GI}
+      SEED_USER_COUNT: ${SEED_USER_COUNT:-0}
+      SEED_EMAIL_DOMAIN: ${SEED_EMAIL_DOMAIN:-}
+      SEED_EMAIL_GROUPS: ${SEED_EMAIL_GROUPS:-}
+      SEED_DOCTOR_GROUPS: ${SEED_DOCTOR_GROUPS:-}
       BROWSER_RUNNER_URL: http://browser-runner:4020
       SANDBOX_EHR_URL: http://sandbox-ehr:4010
       SANDBOX_PAYER_URL: http://sandbox-payer:4011

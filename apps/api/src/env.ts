@@ -18,5 +18,15 @@ export const env = {
   seedEmail: process.env.SEED_EMAIL ?? "staff@demo.clinic",
   seedPassword: process.env.SEED_PASSWORD ?? "password-demo-1",
   seedClinicName: process.env.SEED_CLINIC_NAME ?? "Demo GI",
+  seedUserCount: Number(process.env.SEED_USER_COUNT ?? 0),
+  seedEmailDomain: process.env.SEED_EMAIL_DOMAIN ?? "",
+  seedEmailGroups: (process.env.SEED_EMAIL_GROUPS ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean),
+  seedDoctorGroups: (process.env.SEED_DOCTOR_GROUPS ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean),
   otlpEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "",
 };
