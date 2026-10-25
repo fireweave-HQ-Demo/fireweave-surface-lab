@@ -32,9 +32,9 @@ Password for all three is `password-demo-1`. `make seed` also adds 100 accounts 
 |---|---|
 | Compose | `infra/compose.prod.yml` (`make prod-up` on the host) |
 | Bind | host `:80` |
-| Secrets | GitHub Actions secrets → `~/clinic-assistent/.env` |
+| Secrets | GitHub Actions secrets → `~/showcase-clinic/.env` |
 
-Push to `main` on [clinic-assistent](https://github.com/fireweave-HQ-Demo/clinic-assistent) deploys to EC2 (`54.147.34.187`) via `.github/workflows/deploy.yml`. Production URL: http://54.147.34.187
+Push to `main` on [showcase-clinic](https://github.com/fireweave-HQ-Demo/showcase-clinic) deploys to EC2 (`54.147.34.187`) via `.github/workflows/deploy.yml`. Production URL: http://54.147.34.187
 
 `make test` runs the rules and write-gate tests on the host.
 

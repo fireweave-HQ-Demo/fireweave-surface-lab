@@ -2,7 +2,7 @@
 # Restart console/api/worker on the clinic-node:prod image already on the host.
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-$HOME/clinic-assistent}"
+APP_DIR="${APP_DIR:-$HOME/showcase-clinic}"
 IMAGE="${CLINIC_NODE_IMAGE:-ghcr.io/fireweave-hq-demo/clinic-node:prod}"
 cd "$APP_DIR"
 
