@@ -20,10 +20,16 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   exit 1
 fi
 
-COLLECTOR_IMAGE=otel/opentelemetry-collector-contrib:0.128.0
-if ! docker image inspect "$COLLECTOR_IMAGE" >/dev/null 2>&1; then
-  docker pull "$COLLECTOR_IMAGE"
-fi
+for image in \
+  postgres:16-alpine \
+  bitnamilegacy/minio:latest \
+  temporalio/auto-setup:1.27.2 \
+  otel/opentelemetry-collector-contrib:0.128.0
+do
+  if ! docker image inspect "$image" >/dev/null 2>&1; then
+    docker pull "$image"
+  fi
+done
 
 SERVICES="postgres minio temporal otel-collector api worker console sandbox-ehr sandbox-payer agent-worker"
 if docker image inspect ghcr.io/fireweave-hq-demo/clinic-browser:prod >/dev/null 2>&1; then

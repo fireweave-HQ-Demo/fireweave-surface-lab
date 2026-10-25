@@ -22,10 +22,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build console image
-        run: docker build -f infra/docker/node.prod.Dockerfile -t "$IMAGE" .
+      - name: Build images
+        run: |
+          docker build -f infra/docker/node.prod.Dockerfile -t "$IMAGE" .
+          docker build -f infra/docker/sandbox.Dockerfile -t ghcr.io/fireweave-hq-demo/clinic-sandbox:prod .
+          docker build -f infra/docker/agent.Dockerfile -t ghcr.io/fireweave-hq-demo/clinic-agent:prod .
+          docker build -f infra/docker/browser.prod.Dockerfile -t ghcr.io/fireweave-hq-demo/clinic-browser:prod .
 
-      - name: Load image onto EC2
+      - name: Load images onto EC2
         env:
           HOST: ${{ secrets.EC2_HOST }}
           USER: ${{ secrets.EC2_USER }}
@@ -34,7 +38,11 @@ jobs:
           set -euo pipefail
           umask 077
           printf '%s\n' "$KEY" > "$RUNNER_TEMP/ec2.pem"
-          docker save "$IMAGE" | gzip -1 | ssh -i "$RUNNER_TEMP/ec2.pem" -o StrictHostKeyChecking=accept-new "${USER}@${HOST}" 'gunzip | docker load'
+          docker save "$IMAGE" \
+            ghcr.io/fireweave-hq-demo/clinic-sandbox:prod \
+            ghcr.io/fireweave-hq-demo/clinic-agent:prod \
+            ghcr.io/fireweave-hq-demo/clinic-browser:prod \
+            | gzip -1 | ssh -i "$RUNNER_TEMP/ec2.pem" -o StrictHostKeyChecking=accept-new "${USER}@${HOST}" 'gunzip | docker load'
 
       - name: Restart prod
         uses: appleboy/ssh-action@v1.2.2
@@ -59,7 +67,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           timeout: 20s
-          command_timeout: 180s
+          command_timeout: 600s
           envs: GH_TOKEN,PUBLIC_URL,POSTGRES_PASSWORD,MINIO_ROOT_USER,MINIO_ROOT_PASSWORD,CLINIC_DATA_KEY,BETTER_AUTH_SECRET,INTERNAL_TOKEN,SEED_EMAIL,SEED_PASSWORD,OO_OTLP_ENDPOINT,OO_QUERY_ENDPOINT,OO_AUTHORIZATION,OO_STREAM
           script: |
             set -euo pipefail
