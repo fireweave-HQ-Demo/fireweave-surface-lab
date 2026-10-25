@@ -1,4 +1,6 @@
-name: clinic
+# Laptop stacks: dev, stage, and prod. Ports and names come from infra/env/*.env.
+# The EC2 host uses infra/compose.prod.yml, not this file.
+name: ${COMPOSE_PROJECT_NAME:-clinic}
 
 services:
   postgres:
@@ -9,7 +11,7 @@ services:
       POSTGRES_PASSWORD: clinic
       POSTGRES_DB: clinic
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${BIND_POSTGRES:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U clinic -d clinic"]
       interval: 3s
@@ -25,8 +27,8 @@ services:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: minio12345
     ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:${BIND_MINIO:-9000}:9000"
+      - "127.0.0.1:${BIND_MINIO_CONSOLE:-9001}:9001"
     volumes:
       - minio:/bitnami/minio/data
 
@@ -45,7 +47,7 @@ services:
       POSTGRES_TLS_ENABLED: "false"
       POSTGRES_TLS_DISABLE_HOST_VERIFICATION: "true"
     ports:
-      - "127.0.0.1:7233:7233"
+      - "127.0.0.1:${BIND_TEMPORAL:-7233}:7233"
 
   temporal-ui:
     image: temporalio/ui:2.34.0
@@ -53,9 +55,9 @@ services:
     depends_on: [temporal]
     environment:
       TEMPORAL_ADDRESS: temporal:7233
-      TEMPORAL_CORS_ORIGINS: http://localhost:13000
+      TEMPORAL_CORS_ORIGINS: ${APP_PUBLIC_URL:-http://localhost:13000}
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${BIND_TEMPORAL_UI:-8080}:8080"
 
   openobserve:
     image: public.ecr.aws/zinclabs/openobserve:v0.15.0
@@ -65,7 +67,7 @@ services:
       ZO_ROOT_USER_PASSWORD: ChangeMe123!
       ZO_DATA_DIR: /data
     ports:
-      - "127.0.0.1:5080:5080"
+      - "127.0.0.1:${BIND_OO:-15080}:5080"
     volumes:
       - oo:/data
 
@@ -83,8 +85,8 @@ services:
       - ./otel/collector.yaml:/etc/otel/collector.yaml:ro
     depends_on: [openobserve]
     ports:
-      - "127.0.0.1:4317:4317"
-      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:${BIND_OTEL_GRPC:-4317}:4317"
+      - "127.0.0.1:${BIND_OTEL_HTTP:-4318}:4318"
 
   api:
     profiles: [app]
@@ -96,22 +98,25 @@ services:
     environment:
       DATABASE_URL: postgres://clinic_app:clinic_app@postgres:5432/clinic
       DATABASE_URL_ADMIN: postgres://clinic:clinic@postgres:5432/clinic
-      CLINIC_DATA_KEY: dev-only-data-key
+      CLINIC_DATA_KEY: ${APP_DATA_KEY:-dev-only-data-key}
       TEMPORAL_ADDRESS: temporal:7233
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
       MINIO_ACCESS_KEY: minio
       MINIO_SECRET_KEY: minio12345
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-      BETTER_AUTH_SECRET: dev-better-auth-secret-32chars-min
-      BETTER_AUTH_URL: http://localhost:13000
-      INTERNAL_TOKEN: dev-internal-token
+      BETTER_AUTH_SECRET: ${APP_AUTH_SECRET:-dev-better-auth-secret-32chars-min}
+      BETTER_AUTH_URL: ${APP_PUBLIC_URL:-http://localhost:13000}
+      INTERNAL_TOKEN: ${APP_INTERNAL_TOKEN:-dev-internal-token}
+      SEED_EMAIL: ${SEED_EMAIL:-staff@demo.clinic}
+      SEED_PASSWORD: ${SEED_PASSWORD:-password-demo-1}
+      SEED_CLINIC_NAME: ${SEED_CLINIC_NAME:-Demo GI}
       BROWSER_RUNNER_URL: http://browser-runner:4020
       SANDBOX_EHR_URL: http://sandbox-ehr:4010
       SANDBOX_PAYER_URL: http://sandbox-payer:4011
       PORT: 4000
     ports:
-      - "127.0.0.1:4000:4000"
+      - "127.0.0.1:${BIND_API:-4000}:4000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -128,7 +133,7 @@ services:
     environment:
       DATABASE_URL: postgres://clinic_app:clinic_app@postgres:5432/clinic
       DATABASE_URL_ADMIN: postgres://clinic:clinic@postgres:5432/clinic
-      CLINIC_DATA_KEY: dev-only-data-key
+      CLINIC_DATA_KEY: ${APP_DATA_KEY:-dev-only-data-key}
       TEMPORAL_ADDRESS: temporal:7233
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
@@ -150,7 +155,7 @@ services:
     environment:
       API_INTERNAL_URL: http://api:4000
     ports:
-      - "127.0.0.1:13000:3000"
+      - "127.0.0.1:${BIND_CONSOLE:-13000}:3000"
     depends_on: [api]
 
   marketing:
@@ -159,7 +164,7 @@ services:
     pull_policy: never
     command: ["pnpm", "--filter", "@clinic/marketing", "start"]
     ports:
-      - "127.0.0.1:13001:3001"
+      - "127.0.0.1:${BIND_MARKETING:-13001}:3001"
 
   sandbox-ehr:
     profiles: [agents]
@@ -169,7 +174,7 @@ services:
       dockerfile: infra/docker/sandbox.Dockerfile
     command: ["python", "/ehr.py"]
     ports:
-      - "127.0.0.1:4010:4010"
+      - "127.0.0.1:${BIND_EHR:-4010}:4010"
 
   sandbox-payer:
     profiles: [agents]
@@ -177,7 +182,7 @@ services:
     pull_policy: never
     command: ["python", "/payer.py"]
     ports:
-      - "127.0.0.1:4011:4011"
+      - "127.0.0.1:${BIND_PAYER:-4011}:4011"
 
   browser-runner:
     profiles: [agents]
@@ -186,12 +191,12 @@ services:
       context: ..
       dockerfile: infra/docker/browser.Dockerfile
     environment:
-      CLINIC_DATA_KEY: dev-only-data-key
+      CLINIC_DATA_KEY: ${APP_DATA_KEY:-dev-only-data-key}
       API_URL: http://api:4000
-      INTERNAL_TOKEN: dev-internal-token
+      INTERNAL_TOKEN: ${APP_INTERNAL_TOKEN:-dev-internal-token}
       PORT: 4020
     ports:
-      - "127.0.0.1:4020:4020"
+      - "127.0.0.1:${BIND_BROWSER:-4020}:4020"
     depends_on: [sandbox-ehr, sandbox-payer, api]
 
   agent-worker:
@@ -209,7 +214,7 @@ services:
     image: redis:7
     profiles: [voice]
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:${BIND_REDIS:-6379}:6379"
 
   livekit:
     image: livekit/livekit-server:v1.8.4
@@ -218,7 +223,7 @@ services:
     environment:
       LIVEKIT_KEYS: "devkey: secret"
     ports:
-      - "127.0.0.1:7880:7880"
+      - "127.0.0.1:${BIND_LIVEKIT:-7880}:7880"
     depends_on: [redis]
 
 volumes:

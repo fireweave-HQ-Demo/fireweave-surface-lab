@@ -17,9 +17,10 @@ if (!userId) {
 }
 
 const orgId = "00000000-0000-4000-8000-000000000001";
+const clinicName = env.seedClinicName;
 await admin`
   insert into organization (id, name, slug)
-  values (${orgId}, 'Demo GI', 'demo-gi')
+  values (${orgId}, ${clinicName}, 'demo-gi')
   on conflict (id) do nothing
 `;
 await admin`
@@ -27,8 +28,17 @@ await admin`
   values ('00000000-0000-4000-8000-000000000002', ${orgId}, ${userId}, 'staff')
   on conflict (id) do nothing
 `;
+const [membership] = await admin<{ id: string }[]>`
+  select id from member where user_id = ${userId} and organization_id = ${orgId}
+`;
+if (!membership) {
+  await admin`
+    insert into member (id, organization_id, user_id, role)
+    values (${crypto.randomUUID()}, ${orgId}, ${userId}, 'staff')
+  `;
+}
 await admin`
-  insert into clinics (id, name) values (${orgId}, 'Demo GI')
+  insert into clinics (id, name) values (${orgId}, ${clinicName})
   on conflict (id) do nothing
 `;
 await admin`
@@ -42,5 +52,5 @@ await admin`
   on conflict (clinic_id) do update set document = excluded.document
 `;
 await admin.end();
-console.log(`seeded ${env.seedEmail} in clinic ${orgId}`);
+console.log(`seeded ${env.seedEmail} in ${clinicName} (${orgId})`);
 process.exit(0);

@@ -17,5 +17,6 @@ export const env = {
   port: Number(process.env.PORT ?? 4000),
   seedEmail: process.env.SEED_EMAIL ?? "staff@demo.clinic",
   seedPassword: process.env.SEED_PASSWORD ?? "password-demo-1",
+  seedClinicName: process.env.SEED_CLINIC_NAME ?? "Demo GI",
   otlpEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "",
 };

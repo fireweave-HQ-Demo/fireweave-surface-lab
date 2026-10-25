@@ -9,22 +9,33 @@ Docker is required.
 ```bash
 make up
 make seed
+make stage && make stage-seed
+make prod && make prod-seed
 make e2e
 ```
 
-The console is at http://127.0.0.1:13000. Sign in as `staff@demo.clinic` / `password-demo-1`.
+Three laptop stacks share `infra/compose.yml` and stay isolated by `infra/env/dev.env`, `infra/env/stage.env`, and `infra/env/prod.env`.
 
-## Dev vs prod
+| | Dev | Stage | Prod (laptop) |
+|---|---|---|---|
+| Start | `make up` | `make stage` | `make prod` |
+| Console | http://127.0.0.1:13000 | http://127.0.0.1:23000 | http://127.0.0.1:33000 |
+| Sign in | `staff@demo.clinic` | `staff@stage.clinic` | `staff@prod.clinic` |
+| Clinic | Demo GI | Stage GI | Prod GI |
+| OpenObserve | http://127.0.0.1:15080 | http://127.0.0.1:25080 | http://127.0.0.1:35080 |
 
-| | Dev | Prod |
-|---|---|---|
-| Compose | `infra/compose.yml` (`make up`) | `infra/compose.prod.yml` |
-| Bind | `127.0.0.1:13000` | host `:80` |
-| Secrets | `.env` from `.env.example` | GitHub Actions secrets → `~/clinic-assistent/.env` |
-| Extra | OpenObserve, Temporal UI, marketing, voice | slim stack only |
+Password for all three is `password-demo-1`. `make down`, `make stage-down`, and `make prod-sim-down` stop one stack and keep its volumes.
+
+## EC2
+
+| | EC2 |
+|---|---|
+| Compose | `infra/compose.prod.yml` (`make prod-up` on the host) |
+| Bind | host `:80` |
+| Secrets | GitHub Actions secrets → `~/clinic-assistent/.env` |
 
 Push to `main` on [clinic-assistent](https://github.com/fireweave-HQ-Demo/clinic-assistent) deploys to EC2 (`54.147.34.187`) via `.github/workflows/deploy.yml`. Production URL: http://54.147.34.187
 
-`make test` runs the rules and write-gate tests on the host. `make down` stops the stack.
+`make test` runs the rules and write-gate tests on the host.
 
-Traces leave the API only through the collector. The collector redacts identifiers, then writes locally and to the hosted OpenObserve `clinic` stream. Local UI is http://127.0.0.1:5080 (`admin@example.com` / `ChangeMe123!`). Hosted credentials stay in `.env`. `make e2e` checks that a referral span arrives and that a planted SSN does not.
+Traces leave the API only through the collector. The collector redacts identifiers, then writes to that stack's OpenObserve and to the hosted stream (`clinic`, `clinic-stage`, or `clinic-prod`). OpenObserve login is `admin@example.com` / `ChangeMe123!`. Hosted credentials stay in `.env`. `make e2e` checks that a referral span arrives and that a planted SSN does not.

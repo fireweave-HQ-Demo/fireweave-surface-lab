@@ -1,5 +1,5 @@
-# Production stack. Local/dev stays on infra/compose.yml (127.0.0.1, demo keys).
-# This file is for the EC2 host only. Secrets come from .env — never commit it.
+# EC2 production stack. Secrets come from the host .env — never commit it.
+# Laptop dev, stage, and prod simulations use infra/compose.yml plus infra/env/*.env.
 name: clinic-prod
 
 services:
