@@ -52,7 +52,7 @@ importers:
         version: 1.13.1
       better-auth:
         specifier: 1.3.27
-        version: 1.3.27
+        version: 1.3.27(next@15.5.4(@opentelemetry/api@1.9.0)(@playwright/test@1.55.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       drizzle-orm:
         specifier: 0.44.6
         version: 0.44.6(@electric-sql/pglite@0.3.14)(@opentelemetry/api@1.9.0)(kysely@0.28.18)(postgres@3.4.7)
@@ -81,6 +81,9 @@ importers:
       '@clinic/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      better-auth:
+        specifier: 1.3.27
+        version: 1.3.27(next@15.5.4(@opentelemetry/api@1.9.0)(@playwright/test@1.55.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       lucide-react:
         specifier: 0.544.0
         version: 0.544.0(react@19.1.1)
@@ -3656,7 +3659,7 @@ snapshots:
 
   baseline-browser-mapping@2.11.30: {}
 
-  better-auth@1.3.27:
+  better-auth@1.3.27(next@15.5.4(@opentelemetry/api@1.9.0)(@playwright/test@1.55.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
       '@better-auth/core': 1.3.27
       '@better-auth/utils': 0.3.0
@@ -3671,6 +3674,10 @@ snapshots:
       kysely: 0.28.18
       nanostores: 1.5.5
       zod: 4.1.11
+    optionalDependencies:
+      next: 15.5.4(@opentelemetry/api@1.9.0)(@playwright/test@1.55.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      react: 19.1.1
+      react-dom: 19.1.1(react@19.1.1)
 
   better-call@1.0.19:
     dependencies:
