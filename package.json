@@ -1,18 +1,9 @@
 {
-  "name": "clinic-os",
+  "name": "fireweave-surface-lab",
   "private": true,
-  "version": "0.0.0",
-  "engines": {
-    "node": ">=22"
-  },
+  "type": "module",
   "scripts": {
-    "test": "pnpm --filter @clinic/domain test && pnpm --filter @clinic/contracts test",
-    "e2e": "playwright test",
-    "typecheck": "pnpm -r --if-present typecheck"
-  },
-  "devDependencies": {
-    "@playwright/test": "1.55.0",
-    "typescript": "5.9.2"
-  },
-  "packageManager": "pnpm@11.9.0"
+    "start": "bun server.ts",
+    "test": "bun test"
+  }
 }

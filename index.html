@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Surface lab</title>
+    <style>
+      body {
+        margin: 2rem auto;
+        max-width: 960px;
+        font: 15px/1.4 system-ui, sans-serif;
+        color: #1c1917;
+      }
+      h1 { font-size: 1.25rem; margin: 0 0 0.25rem; }
+      p.note { color: #57534e; margin-top: 0; }
+      form { display: flex; gap: 0.5rem; }
+      input { flex: 1; font: inherit; padding: 0.4rem 0.5rem; }
+      button { font: inherit; padding: 0.4rem 0.8rem; }
+      .error { color: #b91c1c; }
+      table { width: 100%; border-collapse: collapse; margin-top: 1.25rem; }
+      th, td { text-align: left; vertical-align: top; border-top: 1px solid #e7e5e4; padding: 0.45rem; }
+      code { font-size: 0.85em; }
+    </style>
+  </head>
+  <body>
+    <h1>Surface lab</h1>
+    <p class="note">Paste a pull request. This lists the surfaces the detector in this repo returns today.</p>
+    <form id="form">
+      <input id="pr" name="pr" type="url" required placeholder="https://github.com/org/repo/pull/123" />
+      <button type="submit">Show surfaces</button>
+    </form>
+    <p id="status"></p>
+    <table id="out" hidden>
+      <thead>
+        <tr>
+          <th>Path</th>
+          <th>Surface</th>
+          <th>Verdict</th>
+          <th>Kind</th>
+          <th>Entrypoint</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <script type="module">
+      const form = document.querySelector('#form');
+      const status = document.querySelector('#status');
+      const table = document.querySelector('#out');
+      const body = table.querySelector('tbody');
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        status.textContent = 'Checking out the pull request…';
+        status.className = '';
+        table.hidden = true;
+        body.replaceChildren();
+        const pr = new FormData(form).get('pr');
+        const res = await fetch('/api/surfaces', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ pr }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          status.textContent = data.error ?? 'Detection failed.';
+          status.className = 'error';
+          return;
+        }
+        status.textContent = `${data.surfaces.length} surfaces from ${data.zonesExamined} zones.`;
+        for (const s of data.surfaces) {
+          const row = document.createElement('tr');
+          for (const value of [s.path, s.surface ?? '—', s.verdict, s.kind, s.entrypoint ?? '—']) {
+            const cell = document.createElement('td');
+            cell.textContent = value;
+            row.append(cell);
+          }
+          body.append(row);
+        }
+        table.hidden = false;
+      });
+    </script>
+  </body>
+</html>

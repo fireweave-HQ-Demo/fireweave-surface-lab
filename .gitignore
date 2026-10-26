@@ -1,15 +1,1 @@
 node_modules
-dist
-.next
-.turbo
-.venv
-__pycache__
-*.pyc
-.env
-playwright-report
-test-results
-blob-report
-*.tsbuildinfo
-coverage
-.DS_Store
-infra/.data
