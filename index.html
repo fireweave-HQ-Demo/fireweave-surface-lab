@@ -23,7 +23,10 @@
   </head>
   <body>
     <h1>Surface lab</h1>
-    <p class="note">Paste a pull request. This lists the surfaces the detector in this repo returns today.</p>
+    <p class="note">
+      Paste a pull request. The list is the scanner plus the agent, the same merge as Confirm what we found.
+      The agent uses FireWeave's model credential.
+    </p>
     <form id="form">
       <input id="pr" name="pr" type="url" required placeholder="https://github.com/org/repo/pull/123" />
       <button type="submit">Show surfaces</button>
@@ -33,10 +36,10 @@
       <thead>
         <tr>
           <th>Path</th>
-          <th>Surface</th>
-          <th>Verdict</th>
-          <th>Kind</th>
-          <th>Entrypoint</th>
+          <th>Stack</th>
+          <th>Confidence</th>
+          <th>Purpose</th>
+          <th>Source</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -64,10 +67,12 @@
           status.className = 'error';
           return;
         }
-        status.textContent = `${data.surfaces.length} surfaces from ${data.zonesExamined} zones.`;
-        for (const s of data.surfaces) {
+        const agent =
+          data.lanes.agent === 'ok' ? 'agent ok' : `agent ${data.lanes.agent}: ${data.agentNote}`;
+        status.textContent = `${data.rows.length} apps from ${data.zonesExamined} zones. ${agent}.`;
+        for (const s of data.rows) {
           const row = document.createElement('tr');
-          for (const value of [s.path, s.surface ?? '—', s.verdict, s.kind, s.entrypoint ?? '—']) {
+          for (const value of [s.path, s.stack, s.confidence, s.purpose ?? '—', s.source]) {
             const cell = document.createElement('td');
             cell.textContent = value;
             row.append(cell);

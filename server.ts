@@ -2,7 +2,9 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import index from './index.html';
+import { confirmAgentApps } from './agent';
 import { detectSurfaces } from './detect/detect-surfaces';
+import { mergeRows, type ScannerRow } from './merge';
 
 const PR =
   /^https:\/\/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)\/pull\/(\d+)\/?$/;
@@ -50,9 +52,23 @@ Bun.serve({
         try {
           dir = await checkoutPullRequest(body.pr ?? '');
           const found = await detectSurfaces({ cwd: dir });
+          const scanner: ScannerRow[] = found.surfaces.map((s) => ({
+            path: s.path,
+            surface: s.surface,
+            kind: s.kind,
+            verdict: s.verdict,
+            ...(s.entrypoint !== undefined ? { entrypoint: s.entrypoint } : {}),
+          }));
+          const agent = await confirmAgentApps(dir, scanner);
+          const rows = mergeRows(scanner, 'apps' in agent ? agent.apps : null);
           return Response.json({
             pr: body.pr,
-            surfaces: found.surfaces,
+            lanes: {
+              scanner: 'ok',
+              agent: 'apps' in agent ? 'ok' : 'skipped' in agent ? 'skipped' : 'failed',
+            },
+            agentNote: 'apps' in agent ? null : 'skipped' in agent ? agent.skipped : agent.failed,
+            rows,
             unreadable: found.unreadable,
             zonesExamined: found.zonesExamined,
           });
