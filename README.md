@@ -2,20 +2,20 @@
 
 Paste a GitHub pull request. The page lists apps the way Confirm what we found does: the scanner in `detect/`, then an agent pass merged on top.
 
-The agent uses the same credential as fw-server. A subscription token wins over an API key:
+The agent runs through the Cursor SDK. Set a user or team API key:
 
 ```bash
-export ROLLOUT_CI_LLM_PROVIDER_OAUTH_TOKEN=...
-# or, when no subscription token is set:
-export ROLLOUT_CI_LLM_PROVIDER_API_KEY=...
+export CURSOR_API_KEY=...
 ```
 
-The model is `claude-sonnet-5`. With neither variable set, the page shows the scanner list and says the agent was skipped.
+The model is `composer-2.5`. With the variable unset, the page shows the scanner list and says the agent was skipped.
 
 ```bash
 bun install
 bun test
-bun run start
+bun run cli
 ```
 
-Open http://127.0.0.1:8787. The checkout uses your GitHub SSH key.
+`bun run cli` asks for a GitHub repository or pull request URL and prints the same list in the terminal. The checkout uses your `gh` login.
+
+`bun run start` serves the page at http://127.0.0.1:8787. That page still expects a pull request URL and checks it out with your GitHub SSH key.

@@ -25,13 +25,14 @@
     <h1>Surface lab</h1>
     <p class="note">
       Paste a pull request. The list is the scanner plus the agent, the same merge as Confirm what we found.
-      The agent uses FireWeave's model credential.
+      The agent uses a Cursor API key.
     </p>
     <form id="form">
       <input id="pr" name="pr" type="url" required placeholder="https://github.com/org/repo/pull/123" />
       <button type="submit">Show surfaces</button>
     </form>
     <p id="status"></p>
+    <p id="held" class="note" hidden></p>
     <table id="out" hidden>
       <thead>
         <tr>
@@ -47,6 +48,7 @@
     <script type="module">
       const form = document.querySelector('#form');
       const status = document.querySelector('#status');
+      const held = document.querySelector('#held');
       const table = document.querySelector('#out');
       const body = table.querySelector('tbody');
       form.addEventListener('submit', async (event) => {
@@ -54,6 +56,8 @@
         status.textContent = 'Checking out the pull request…';
         status.className = '';
         table.hidden = true;
+        held.hidden = true;
+        held.textContent = '';
         body.replaceChildren();
         const pr = new FormData(form).get('pr');
         const res = await fetch('/api/surfaces', {
@@ -69,7 +73,15 @@
         }
         const agent =
           data.lanes.agent === 'ok' ? 'agent ok' : `agent ${data.lanes.agent}: ${data.agentNote}`;
-        status.textContent = `${data.rows.length} apps from ${data.zonesExamined} zones. ${agent}.`;
+        status.textContent = `${data.rows.length} surfaces from ${data.zonesExamined} zones. ${agent}.`;
+        if (data.held?.length) {
+          held.hidden = false;
+          held.textContent =
+            'Not selected: ' +
+            data.held
+              .map((zone) => `${zone.path} (${zone.reason})`)
+              .join(', ');
+        }
         for (const s of data.rows) {
           const row = document.createElement('tr');
           for (const value of [s.path, s.stack, s.confidence, s.purpose ?? '—', s.source]) {

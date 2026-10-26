@@ -1,29 +1,43 @@
 import { describe, expect, test } from 'bun:test';
 import { mergeRows, type AgentApp, type ScannerRow } from './merge';
 
-const scanner: ScannerRow = {
-  path: 'apps/api',
-  surface: 'ts-server',
+const confirmed: ScannerRow = {
+  path: 'apps/console',
+  surface: 'web',
   kind: 'app',
   verdict: 'confirmed',
 };
 
-const agent = (verified: boolean): AgentApp => ({
+const probable: ScannerRow = {
   path: 'apps/api',
+  surface: 'ts-server',
+  kind: 'unknown',
+  verdict: 'probable',
+};
+
+const library: ScannerRow = {
+  path: 'packages/db',
+  surface: 'ts-server',
+  kind: 'library',
+  verdict: 'probable',
+};
+
+const purpose = (path: string): AgentApp => ({
+  path,
   kind: 'ts-server',
   purpose: 'HTTP API',
-  reasoning: 'Hono is the server.',
-  selfRated: 'high',
-  evidence: [{ file: 'apps/api/package.json', line: 1, snippet: '"hono"', verified }],
+  reasoning: 'It serves the clinic backend.',
 });
 
+const selected = new Set(['apps/console', 'apps/api']);
+
 describe('mergeRows', () => {
-  test('scanner alone is medium and has no purpose', () => {
-    expect(mergeRows([scanner], null)).toEqual([
+  test('a confirmed surface with no agent purpose is high', () => {
+    expect(mergeRows([confirmed], null, selected)).toEqual([
       {
-        path: 'apps/api',
-        stack: 'ts-server',
-        confidence: 'medium',
+        path: 'apps/console',
+        stack: 'web',
+        confidence: 'high',
         purpose: null,
         reasoning: null,
         source: 'scanner',
@@ -31,29 +45,34 @@ describe('mergeRows', () => {
     ]);
   });
 
-  test('a quote that matches the file raises the row to high and keeps the purpose', () => {
-    expect(mergeRows([scanner], [agent(true)])[0]).toMatchObject({
-      confidence: 'high',
-      purpose: 'HTTP API',
-      source: 'both',
-    });
-  });
-
-  test('a quote that does not match leaves the scanner row unchanged', () => {
-    expect(mergeRows([scanner], [agent(false)])[0]).toMatchObject({
+  test('a probable surface with no agent purpose is medium', () => {
+    expect(mergeRows([probable], null, new Set(['apps/api']))[0]).toMatchObject({
       confidence: 'medium',
       purpose: null,
       source: 'scanner',
     });
   });
 
-  test('an app only the agent found is kept when its quote matches', () => {
-    const extra = { ...agent(true), path: 'apps/worker', kind: 'python' };
-    expect(mergeRows([scanner], [extra]).map((r) => r.path)).toEqual(['apps/api', 'apps/worker']);
+  test('a purpose sticks without a quote, and confidence stays with the verdict', () => {
+    const rows = mergeRows([confirmed, probable], [purpose('apps/api'), purpose('apps/console')], selected);
+    expect(rows.find((r) => r.path === 'apps/console')).toMatchObject({
+      confidence: 'high',
+      purpose: 'HTTP API',
+      source: 'both',
+    });
+    expect(rows.find((r) => r.path === 'apps/api')).toMatchObject({
+      confidence: 'medium',
+      purpose: 'HTTP API',
+      source: 'both',
+    });
   });
 
-  test('an app only the agent found is dropped when its quote does not match', () => {
-    const extra = { ...agent(false), path: 'apps/missing' };
-    expect(mergeRows([], [extra])).toEqual([]);
+  test('a row that was not selected is omitted, including one the agent names', () => {
+    const rows = mergeRows(
+      [confirmed, library],
+      [purpose('packages/db')],
+      new Set(['apps/console'])
+    );
+    expect(rows.map((r) => r.path)).toEqual(['apps/console']);
   });
 });
