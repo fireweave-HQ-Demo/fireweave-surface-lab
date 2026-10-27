@@ -102,7 +102,7 @@ export function nodeExtractor(repoRoot: string): Extractor {
       const text = await readText(abs);
       if (text === null) return { unresolved: `missing ${token}` };
       const rel = repoRelative(repoRoot, abs);
-      const hit = citeAll(text, IDIOMS).find(
+      const hit = citeAll(text, IDIOMS, rel).find(
         (item) => item.construct === "listener" && lineIsReachable(text, item.line, rel)
       );
       if (!hit) return { unresolved: `${token} has no execution construct` };

@@ -5,8 +5,14 @@ import { cite, readText, type Idiom } from "./scan";
 
 const IDIOMS: Idiom[] = [
   { grep: /#\[tokio::main\]/, construct: "event_loop" },
+  { grep: /\bloop\s*\{/, construct: "event_loop" },
   { grep: /\bTcpListener::bind\s*\(/, construct: "listener" },
   { grep: /\baxum::serve\s*\(/, construct: "listener" },
+  { grep: /\bHttpServer::new\s*\(/, construct: "listener" },
+  { grep: /\bServer::bind\s*\(/, construct: "listener" },
+  { grep: /\.bind\s*\(/, construct: "listener" },
+  { grep: /\.serve\s*\(/, construct: "listener" },
+  { grep: /\.start\s*(?:::|<|\()/, construct: "event_loop" },
 ];
 
 function fileToken(decl: string): string | null {
@@ -36,7 +42,7 @@ export function rustExtractor(repoRoot: string): Extractor {
       const abs = join(unitDir(repoRoot, unit), relative);
       const text = await readText(abs);
       if (text === null) return { unresolved: `missing ${relative}` };
-      const hit = cite(text, IDIOMS);
+      const hit = cite(text, IDIOMS, repoRelative(repoRoot, abs));
       if (!hit) return { unresolved: `${relative} has no execution construct` };
       return { file: repoRelative(repoRoot, abs), line: hit.line };
     },

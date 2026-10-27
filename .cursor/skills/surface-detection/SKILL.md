@@ -116,7 +116,7 @@ After you emit, a deterministic checker (no model) will check:
 3. The cited line itself contains a construct from the **listener column of the claimed category, for that language** (`references/constructs.md`). A neighbor line does not count. A `service` claim citing `new Hono(`, `FastAPI(`, `http.HandleFunc`, `@RestController`, `next.config.ts`, or a route export fails.
 4. If `evidence_kind` is `resolved_declaration`, the resolution is recomputed from the manifest. If your `file:line` differs from the recomputed one, the claim is rejected.
 5. If `claim` is `does_not_run`, `searched` must be non-empty **and** must include at least one declared-script resolution attempt and one implicit sweep.
-6. If `claim` is `runs` and `category` is `tooling` or `library`, the claim is rejected.
+6. If `claim` is `runs` and `category` is `tooling` or `library`, the claim is rejected. A construct that executes but is tooling is `runs_not_surface`, with the same file:line. That claim is not a surface.
 7. `counter_checked` must reference a concrete action, not a restatement of `counter_hypothesis`.
 8. `searched.files_opened` must be non-empty for any `does_not_run` claim.
 

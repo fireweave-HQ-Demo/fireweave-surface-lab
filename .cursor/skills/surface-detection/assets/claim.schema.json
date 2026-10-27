@@ -16,7 +16,7 @@
   ],
   "properties": {
     "unit": { "type": "string", "minLength": 1 },
-    "claim": { "enum": ["runs", "does_not_run", "uncertain"] },
+    "claim": { "enum": ["runs", "runs_not_surface", "does_not_run", "uncertain"] },
     "category": {
       "enum": ["service", "worker", "static-web", "cli", "library", "tooling", "placeholder", "ambiguous"]
     },
@@ -75,6 +75,10 @@
   "allOf": [
     {
       "if": { "properties": { "claim": { "const": "runs" } }, "required": ["claim"] },
+      "then": { "required": ["entrypoint", "evidence_kind"] }
+    },
+    {
+      "if": { "properties": { "claim": { "const": "runs_not_surface" } }, "required": ["claim"] },
       "then": { "required": ["entrypoint", "evidence_kind"] }
     },
     {

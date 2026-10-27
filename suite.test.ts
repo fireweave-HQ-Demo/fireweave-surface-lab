@@ -11,6 +11,15 @@ describe("suite catalog", () => {
     for (const repo of runnableRepos(catalog)) {
       expect(parseGitLink(repo.url)).not.toBeNull();
     }
+    const polyglot = catalog.repos.find((repo) => repo.id === "realworld-polyglot");
+    expect(polyglot?.clones?.map((clone) => clone.dir)).toEqual([
+      "nitro",
+      "django-ninja",
+      "gin",
+      "spring",
+      "express",
+    ]);
+    for (const clone of polyglot?.clones ?? []) expect(parseGitLink(clone.url)).not.toBeNull();
     const org = catalog.repos.find((repo) => repo.id === "pages-themes");
     expect(org?.runnable).toBe(false);
     expect(parseGitLink(org?.url ?? "")).toBeNull();

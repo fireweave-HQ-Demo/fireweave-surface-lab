@@ -17,7 +17,7 @@ const RANK: Record<string, number> = {
   main_guard: 10,
 };
 
-const SOURCE = /\.(py|ts|tsx|js|mjs|cjs|go|rs|html)$/;
+const SOURCE = /\.(py|ts|tsx|js|mjs|cjs|go|rs|java|html)$/;
 
 type Found = Hit & {
   file: string;
@@ -70,7 +70,7 @@ export async function investigateUnit(
   ];
 
   const searched = {
-    globs: tools.map((tool) => `${tool.ecosystem}:**/*`).sort(),
+    globs: (tools.length > 0 ? tools.map((tool) => `${tool.ecosystem}:**/*`) : [`${unit.path}/**/*`]).sort(),
     greps: leads.length > 0 ? leads.map((lead) => `resolve:${lead.lead}`) : ["resolve:no-scripts"],
     files_opened: [
       ...unit.manifests.map((name) => (unit.path === "." ? name : `${unit.path}/${name}`)),
@@ -94,10 +94,10 @@ export async function investigateUnit(
     }
     const cited =
       "line" in resolution
-        ? acceptHit(resolution.file, text, citeAll(text, tool.executionIdioms()), resolution.line)
+        ? acceptHit(resolution.file, text, citeAll(text, tool.executionIdioms(), resolution.file), resolution.line)
         : tools
             .map((candidate) => {
-              const hit = acceptHit(resolution.file, text, citeAll(text, candidate.executionIdioms()));
+              const hit = acceptHit(resolution.file, text, citeAll(text, candidate.executionIdioms(), resolution.file));
               return hit ? { hit, ecosystem: candidate.ecosystem } : null;
             })
             .filter((item): item is { hit: Hit; ecosystem: string } => item !== null)
@@ -128,7 +128,7 @@ export async function investigateUnit(
       const text = await readText(abs);
       if (text === null) continue;
       for (const tool of tools) {
-        const hit = acceptHit(file, text, citeAll(text, tool.executionIdioms()));
+        const hit = acceptHit(file, text, citeAll(text, tool.executionIdioms(), file));
         if (!hit) continue;
         const idiom = tool.executionIdioms().find((item) => item.construct === hit.construct);
         if (idiom) searched.greps.push(idiom.grep.source);
@@ -150,6 +150,7 @@ export async function investigateUnit(
     deps: Object.keys(deps).length,
   });
   const runs = best !== undefined && category !== "library" && category !== "tooling" && category !== "placeholder" && category !== "ambiguous";
+  const runsNotSurface = !runs && best !== undefined && category === "tooling";
 
   const searchedRecord = {
     globs: [...new Set(searched.globs)].sort(),
@@ -157,19 +158,20 @@ export async function investigateUnit(
     files_opened: [...new Set(searched.files_opened)].sort(),
   };
   const openedManifest = searchedRecord.files_opened[0] ?? unit.path;
-  const counter_hypothesis = runs
+  const cited = (runs || runsNotSurface) && best;
+  const counter_hypothesis = cited
     ? "the cited construct is a test helper or a client call"
     : "an undeclared entry still executes";
-  const counter_checked = runs && best
+  const counter_checked = cited
     ? `opened ${best.file} at line ${best.line}`
     : `opened ${openedManifest}; glob ${searchedRecord.globs[0] ?? "*"}`;
 
   const claim: Claim = {
     unit: unit.path,
-    claim: runs ? "runs" : "does_not_run",
+    claim: runs ? "runs" : runsNotSurface ? "runs_not_surface" : "does_not_run",
     category,
-    ...(best && runs ? { ecosystem: best.ecosystem } : best ? { ecosystem: best.ecosystem } : {}),
-    ...(runs && best
+    ...(best && (runs || runsNotSurface) ? { ecosystem: best.ecosystem } : best ? { ecosystem: best.ecosystem } : {}),
+    ...(cited
       ? {
           entrypoint: { file: best.file, line: best.line, snippet: best.snippet },
           evidence_kind: best.fromDeclaration ? "resolved_declaration" : best.evidence_kind,

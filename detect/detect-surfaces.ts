@@ -38,7 +38,7 @@
  * users (`clientShipped`): such code never receives a server key, and its
  * suggested `startProfile` is `client`.
  */
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { HarnessSurfaceName, StartProfile } from './types';
 import { discoverZones, type UnreadableZone, type Zone } from './topology';
@@ -290,6 +290,59 @@ function nominateSurfaces(
   return nominated;
 }
 
+const SOURCE_FILE = /\.(py|ts|tsx|js|mjs|cjs|go|rs)$/;
+const FRAMEWORK_SERVER = /\b(?:next\s+(?:start|dev)|gunicorn|uvicorn)\b/;
+
+/** A start script counts when it runs a file in this zone, or a framework server. */
+function scriptRunsRepo(command: string, zoneAbs: string, files: readonly string[]): boolean {
+  if (FRAMEWORK_SERVER.test(command)) return true;
+  for (const raw of command.split(/\s+/)) {
+    const token = raw.replace(/^['"]|['"]$/g, '').replace(/^\.\//, '');
+    if (SOURCE_FILE.test(token) && files.some((file) => file === join(zoneAbs, token))) return true;
+  }
+  return false;
+}
+
+/** The last CMD or ENTRYPOINT is the process the image runs. */
+function imageCommand(dockerfile: string): string | null {
+  const lines = dockerfile
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => /^(CMD|ENTRYPOINT)\b/.test(line));
+  return lines[lines.length - 1] ?? null;
+}
+
+function sourceToken(command: string): string | null {
+  const body = command.replace(/^(CMD|ENTRYPOINT)\s+/, "");
+  const tokens = body.trim().startsWith("[")
+    ? [...body.matchAll(/"([^"]+)"/g)].map((match) => match[1]!)
+    : body.split(/\s+/);
+  return tokens.find((token) => SOURCE_FILE.test(token))?.replace(/^\.\//, "") ?? null;
+}
+
+/**
+ * A Dockerfile is a deployment manifest. It is deployability evidence only when
+ * the process it runs is a source file in this zone. `nginx -g daemon off` is
+ * not. `python server.py` is, when that file exists.
+ */
+async function dockerfileSource(zoneAbs: string): Promise<string | null> {
+  let text: string;
+  try {
+    text = await readFile(join(zoneAbs, "Dockerfile"), "utf8");
+  } catch {
+    return null;
+  }
+  const command = imageCommand(text);
+  const token = command ? sourceToken(command) : null;
+  if (!token) return null;
+  try {
+    const info = await stat(join(zoneAbs, token));
+    return info.isFile() ? token : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Deployability evidence — does this zone look like something that RUNS? */
 async function entrypointEvidence(
   root: string,
@@ -309,15 +362,20 @@ async function entrypointEvidence(
       // script (watch builds, storybook), so counting it as deployability
       // evidence classifies component libraries as apps, and a positive
       // language read then marks them `confirmed`.
+      let devServerOnly = false;
       for (const key of ['start', 'serve']) {
-        if (typeof s[key] === 'string') {
+        if (typeof s[key] !== 'string') continue;
+        const command = String(s[key]);
+        if (scriptRunsRepo(command, abs, files)) {
           evidence.push({
             kind: 'entrypoint.package-json-script',
             path: `${zone.path}/package.json`,
-            detail: `scripts.${key} = ${String(s[key]).slice(0, 60)}`,
+            detail: `scripts.${key} = ${command.slice(0, 60)}`,
           });
-          break;
+        } else {
+          devServerOnly = true;
         }
+        break;
       }
       // A `build` script is WEAK on its own — every library builds. It becomes
       // deployability evidence only for a zone nothing imports (see
@@ -325,7 +383,9 @@ async function entrypointEvidence(
       // deploy. This is what recognises a monorepo web app whose Dockerfile
       // lives centrally in infra/ rather than beside its package.json — the
       // most common shape there is, and one an entrypoint-only rule misses.
-      if (typeof s.build === 'string') {
+      // A start script that only launches a dev server (`ng serve`,
+      // `react-scripts start`) says the opposite: the package is not the process.
+      if (typeof s.build === 'string' && !devServerOnly) {
         evidence.push({
           kind: 'deployability.build-script',
           path: `${zone.path}/package.json`,
@@ -350,13 +410,16 @@ async function entrypointEvidence(
     }
   }
 
-  for (const marker of [
-    'Dockerfile',
-    'Procfile',
-    'fly.toml',
-    'render.yaml',
-    'vercel.json',
-  ]) {
+  const source = await dockerfileSource(abs);
+  if (source) {
+    evidence.push({
+      kind: 'entrypoint.deploy-manifest',
+      path: `${zone.path}/Dockerfile`,
+      detail: `Dockerfile runs ${source}`,
+    });
+  }
+
+  for (const marker of ['Procfile', 'fly.toml', 'render.yaml', 'vercel.json']) {
     if (files.some((f) => f === join(abs, marker))) {
       evidence.push({
         kind: 'entrypoint.deploy-manifest',

@@ -1,5 +1,5 @@
 {
-  "runOrder": ["hono", "supabase", "realworld", "awesome-compose", "nvm", "fireweave-test-repo"],
+  "runOrder": ["hono", "supabase", "realworld-polyglot", "awesome-compose", "nvm", "fireweave-test-repo"],
   "repos": [
     {
       "id": "hono",
@@ -67,11 +67,27 @@
     {
       "id": "realworld",
       "tier": 3,
-      "name": "RealWorld",
+      "name": "RealWorld docs",
       "url": "https://github.com/gothinkster/realworld",
       "languages": [],
-      "probes": "construct table across languages",
-      "note": "This tree is specs, docs, and a Makefile. The language implementations are not in this repository. A clean run does not invent a surface from the README."
+      "probes": "docs-only tree is not a polyglot suite",
+      "note": "This tree is specs, docs, and a Makefile. The implementations live in other repositories. A clean run does not invent a surface from the README."
+    },
+    {
+      "id": "realworld-polyglot",
+      "tier": 3,
+      "name": "RealWorld implementations",
+      "url": "https://github.com/realworld-apps/nitro-prisma-zod-realworld-example-app",
+      "languages": ["typescript", "python", "go", "java"],
+      "probes": "five implementation repos cloned into one parent",
+      "note": "The parent is synthetic. Each directory is one implementation, so the pipeline sees a polyglot tree with a known app in each.",
+      "clones": [
+        { "dir": "nitro", "url": "https://github.com/realworld-apps/nitro-prisma-zod-realworld-example-app" },
+        { "dir": "django-ninja", "url": "https://github.com/c4ffein/realworld-django-ninja" },
+        { "dir": "gin", "url": "https://github.com/gothinkster/golang-gin-realworld-example-app" },
+        { "dir": "spring", "url": "https://github.com/gothinkster/spring-boot-realworld-example-app" },
+        { "dir": "express", "url": "https://github.com/gothinkster/node-express-realworld-example-app" }
+      ]
     },
     {
       "id": "awesome-compose",

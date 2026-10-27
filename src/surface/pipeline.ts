@@ -14,7 +14,24 @@ export type PipelineResult = {
   mode: "shadow" | "promote";
   promotion: { selected: string[]; review: string[] } | null;
   flips: string[];
+  /** Every unit the investigator opened, including ones the diff table omits. */
+  investigated: number;
+  summary: string;
 };
+
+/** Counts include units the table hides once both sides agree they are not surfaces. */
+export function investigationSummary(investigated: number, diffs: readonly Diff[]): string {
+  let bothSurface = 0;
+  let scannerOnly = 0;
+  let agentOnly = 0;
+  for (const diff of diffs) {
+    if (diff.cell === "both_surface") bothSurface += 1;
+    else if (diff.cell === "scanner_only") scannerOnly += 1;
+    else if (diff.cell === "agent_only") agentOnly += 1;
+  }
+  const verifiedNonSurface = investigated - bothSurface - scannerOnly - agentOnly;
+  return `${investigated} units investigated · ${bothSurface} both_surface · ${scannerOnly} scanner_only · ${agentOnly} agent_only · ${verifiedNonSurface} verified non-surfaces`;
+}
 
 /**
  * Level 1, then Level 2, then the verifier, then the diff.
@@ -51,5 +68,7 @@ export async function runSurfacePipeline(
     mode,
     promotion: mode === "promote" ? promoteSelection(diffs) : null,
     flips,
+    investigated: verified.length,
+    summary: investigationSummary(verified.length, diffs),
   };
 }

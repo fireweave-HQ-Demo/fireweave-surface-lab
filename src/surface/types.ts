@@ -26,7 +26,7 @@ export type Category =
   | "placeholder"
   | "ambiguous";
 
-export type ClaimKind = "runs" | "does_not_run" | "uncertain";
+export type ClaimKind = "runs" | "runs_not_surface" | "does_not_run" | "uncertain";
 
 export type Claim = {
   unit: string;

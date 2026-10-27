@@ -18,10 +18,10 @@ The line binds a port or starts the listener and blocks.
 | Language | Entry | Listener | Lookalike |
 |---|---|---|---|
 | JavaScript, TypeScript, Node, Bun, Deno | top level, or a function the top level calls | `.listen(`, `serve(`, `http.createServer(`, `https.createServer(`, `Bun.serve(`, `Deno.serve(` | `new Hono(`, `express()`, `Fastify(`, `export default app`, `export const handler`, `export async function GET`, `addEventListener('fetch'` inside a function nothing calls |
-| Python | module top level, or under `if __name__` | `uvicorn.run`, `app.run(`, `.serve_forever(`, `HTTPServer(`, `ThreadingHTTPServer(`, `get_wsgi_application(` | `FastAPI(`, `Flask(`, `Django(` |
-| Go | body of `func main` | `http.ListenAndServe`, `http.Serve`, `net.Listen` | `http.HandleFunc`, `http.Handle`, a `func main` that returns without a listener |
-| Rust | body of `fn main` | `TcpListener::bind`, `axum::serve`, `actix_web::HttpServer` | `pub fn` in a library crate, a `fn main` that returns without a listener |
-| Java, Kotlin | `public static void main`, `fun main` | `SpringApplication.run`, `ServerSocket(`, `HttpServer.create`, Ktor `embeddedServer` | `@RestController`, `@GetMapping`, `@SpringBootApplication` on a class with no `main` |
+| Python | module top level, or under `if __name__`, or in a function that guard calls | `uvicorn.run`, `<name>.run(`, `<name>.run_app(`, `.serve_forever(`, `HTTPServer(`, `ThreadingHTTPServer(`, `get_wsgi_application(`, `execute_from_command_line(` | `FastAPI(`, `Flask(`, `Django(`, `asyncio.run(`, `worker.run(`, a `__main__` guard with no listener in its block |
+| Go | body of `func main` | `http.ListenAndServe`, `http.Serve`, `net.Listen`, `.Run(`, `.Start(`, `.Listen(` | `http.HandleFunc`, `http.Handle`, a `func main` that returns without a listener |
+| Rust | body of `fn main` | `TcpListener::bind`, `axum::serve`, `HttpServer::new`, `Server::bind`, `.bind(`, `.serve(`, a `loop` or `.start(` in `fn main` | `pub fn` in a library crate, a `fn main` that returns without a listener or a loop |
+| Java, Kotlin | `public static void main`, `fun main` | `SpringApplication.run`, `port(<number>)`, `ServerSocket(`, `HttpServer.create`, Ktor `embeddedServer` | `@RestController`, `@GetMapping`, `@SpringBootApplication` on a class with no `main` |
 | C# | `Main` | `WebApplication` `.Run(`, `app.Run(`, `.Listen(` | a controller class, `MapGet` with no `.Run(` |
 | Ruby | boot file or the manifest command that starts the process | `TCPServer.new`, `WEBrick` `.start`, the `rails server` / `puma` / `rackup` line in the manifest | a model, a controller, `Rails.application.routes.draw` |
 | PHP | front controller the start command runs, or the manifest command | `socket_listen`, ReactPHP `$socket->listen` / `->run(`, the `php -S` or `php artisan serve` line in the manifest | a Laravel routes file, a class with no listener |

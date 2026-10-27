@@ -66,6 +66,17 @@ export async function verify(repoRoot: string, claim: Claim): Promise<VerifiedCl
     return reject(claim, `${claim.category} is not a surface`);
   }
 
+  if (claim.claim === "runs_not_surface") {
+    if (!claim.entrypoint) return reject(claim, "runs_not_surface has no file:line");
+    const abs = join(repoRoot, claim.entrypoint.file);
+    const text = await readText(abs);
+    if (text === null) return reject(claim, `missing ${claim.entrypoint.file}`);
+    const lines = text.split(/\r?\n/);
+    if (claim.entrypoint.line < 1 || claim.entrypoint.line > lines.length) {
+      return reject(claim, `line ${claim.entrypoint.line} is outside ${claim.entrypoint.file}`);
+    }
+  }
+
   if (claim.claim === "runs") {
     if (!claim.entrypoint) return reject(claim, "runs has no file:line");
     const abs = join(repoRoot, claim.entrypoint.file);

@@ -1,4 +1,6 @@
-const SOURCE = /\.(py|ts|tsx|js|mjs|cjs|mts|cts|go|rs)$/;
+import { codeLines, lexLang, type LexLang } from "./lex";
+
+const SOURCE = /\.(py|ts|tsx|js|mjs|cjs|mts|cts|go|rs|java|kt)$/;
 const MANIFEST = /(?:^|\/)(package\.json|pyproject\.toml|Dockerfile|Procfile|go\.mod|Cargo\.toml)$/;
 
 /** A runs citation has to be source or a package file. README and other prose are not. */
@@ -33,8 +35,14 @@ export function lineIsReachable(text: string, lineNo: number, file: string): boo
   if (isCommentLine(line)) return false;
   if (MANIFEST.test(file)) return true;
   if (file.endsWith(".py")) return inReachableScope(pythonScopes(lines), lineNo);
-  if (/\.(go|rs)$/.test(file)) return inReachableScope(braceScopes(lines, /\bfunc\s+main\s*\(|\bfn\s+main\s*\(/), lineNo);
-  if (/\.(ts|tsx|js|mjs|cjs|mts|cts)$/.test(file)) return inReachableScope(braceScopes(lines, /$^/), lineNo);
+  const lang = lexLang(file);
+  if (lang === "go" || lang === "rust") {
+    return inReachableScope(braceScopes(lines, /\bfunc\s+main\s*\(|\bfn\s+main\s*\(/, lang), lineNo);
+  }
+  if (lang === "java") {
+    return inReachableScope(braceScopes(lines, /\bvoid\s+main\s*\(/, lang), lineNo);
+  }
+  if (lang === "js") return inReachableScope(braceScopes(lines, /$^/, lang), lineNo);
   return false;
 }
 
@@ -89,43 +97,25 @@ function pythonScopes(lines: readonly string[]): { scopes: Scope[]; calls: Map<s
   return { scopes, calls: callsFrom(lines, scopes, (line) => line.replace(/#.*$/, "")) };
 }
 
-function braceScopes(lines: readonly string[], entry: RegExp): { scopes: Scope[]; calls: Map<string | null, Set<string>> } {
+function braceScopes(
+  lines: readonly string[],
+  entry: RegExp,
+  lang: LexLang
+): { scopes: Scope[]; calls: Map<string | null, Set<string>> } {
   const scopes: Scope[] = [];
   let depth = 0;
-  let block = false;
   const stack: { name: string | null; depth: number; start: number }[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    let code = "";
-    const raw = lines[i] ?? "";
-    if (block) {
-      const close = raw.indexOf("*/");
-      if (close === -1) continue;
-      block = false;
-      code = raw.slice(close + 2);
-    } else {
-      code = raw.replace(/\/\/.*$/, "");
-      const open = code.indexOf("/*");
-      if (open !== -1) {
-        const close = code.indexOf("*/", open + 2);
-        if (close === -1) {
-          block = true;
-          code = code.slice(0, open);
-        } else {
-          code = code.slice(0, open) + code.slice(close + 2);
-        }
-      }
-    }
-    code = code.replace(/"(?:\\.|[^"])*"/g, '""').replace(/'(?:\\.|[^'])*'/g, "''");
-    const named = /(?:function\s+(\w+)|func\s+(\w+)\s*\(|fn\s+(\w+)\s*\(|(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>))/.exec(
+  const codes = codeLines(lines.join("\n"), lang === "py" ? "x.py" : lang === "go" ? "x.go" : lang === "rust" ? "x.rs" : lang === "java" ? "x.java" : "x.ts");
+  for (let i = 0; i < codes.length; i++) {
+    const code = codes[i] ?? "";
+    const named = /(?:function\s+(\w+)|func\s+(\w+)\s*\(|fn\s+(\w+)\s*\(|(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>)|(?:void|fun)\s+(\w+)\s*\()/.exec(
       code
     );
-    const name = named?.[1] || named?.[2] || named?.[3] || named?.[4] || null;
+    const name = named?.[1] || named?.[2] || named?.[3] || named?.[4] || named?.[5] || null;
     const opens = (code.match(/\{/g) ?? []).length;
     const closes = (code.match(/\}/g) ?? []).length;
-    if (name && depth === 0 && opens > 0) {
-      stack.push({ name: entry.test(raw) ? "main" : name, depth: depth + 1, start: i });
-    } else if (entry.test(raw) && depth === 0 && opens > 0) {
-      stack.push({ name: "main", depth: depth + 1, start: i });
+    if ((name || entry.test(code)) && opens > 0) {
+      stack.push({ name: entry.test(code) ? "main" : name, depth: depth + 1, start: i });
     }
     depth += opens - closes;
     while (stack.length > 0 && depth < stack[stack.length - 1]!.depth) {
@@ -134,7 +124,7 @@ function braceScopes(lines: readonly string[], entry: RegExp): { scopes: Scope[]
     }
   }
   for (const open of stack) scopes.push({ name: open.name, start: open.start, end: lines.length });
-  return { scopes, calls: callsFrom(lines, scopes, (line) => line.replace(/\/\/.*$/, "")) };
+  return { scopes, calls: callsFrom(codes, scopes, (line) => line) };
 }
 
 function callsFrom(
@@ -151,14 +141,4 @@ function callsFrom(
     calls.set(scope, bucket);
   }
   return calls;
-}
-
-function scopeAt(scopes: readonly Scope[], lineNo: number): string | null {
-  const index = lineNo - 1;
-  let best: Scope | null = null;
-  for (const scope of scopes) {
-    if (index < scope.start || index >= scope.end) continue;
-    if (!best || scope.start >= best.start) best = scope;
-  }
-  return best?.name ?? null;
 }

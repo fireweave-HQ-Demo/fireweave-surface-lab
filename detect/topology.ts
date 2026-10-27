@@ -15,8 +15,9 @@
  * failure `surface-scan-vocabulary.ts` exists to prevent, one level up. So an
  * unreadable zone becomes an `UnreadableZone` the caller MUST surface.
  */
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
+import { isManifestName } from '../manifests';
 
 /** A directory that could independently be a surface. */
 export interface Zone {
@@ -61,20 +62,6 @@ const SKIP_DIRS = new Set([
   '.output',
 ]);
 
-const MANIFEST_NAMES = [
-  'package.json',
-  'go.mod',
-  'Cargo.toml',
-  'pyproject.toml',
-  'setup.py',
-  'requirements.txt',
-  'pom.xml',
-  'build.gradle',
-  'build.gradle.kts',
-  'Package.swift',
-  'pubspec.yaml',
-] as const;
-
 async function readJson(
   path: string
 ): Promise<
@@ -97,18 +84,16 @@ async function readJson(
 }
 
 async function manifestsIn(dir: string): Promise<string[]> {
-  const found: string[] = [];
-  for (const name of MANIFEST_NAMES) {
-    try {
-      const s = await stat(join(dir, name));
-      if (s.isFile()) found.push(name);
-    } catch {
-      // Absent is the common case and carries no information — only a
-      // present-but-unreadable manifest is a finding, and that surfaces when
-      // we actually parse it below.
-    }
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return [];
   }
-  return found;
+  return entries
+    .filter((entry) => entry.isFile() && isManifestName(entry.name))
+    .map((entry) => entry.name)
+    .sort();
 }
 
 /** Expand one workspace glob (`packages/*`, `apps/**`) to existing directories. */

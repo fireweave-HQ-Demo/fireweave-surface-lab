@@ -1,6 +1,7 @@
 import type { Unit } from "../types";
 import { dockerExtractor } from "./docker";
 import { goExtractor } from "./go";
+import { javaExtractor } from "./java";
 import { nodeExtractor } from "./node";
 import { pythonExtractor } from "./python";
 import { rustExtractor } from "./rust";
@@ -18,16 +19,22 @@ const FACTORIES: Record<string, ExtractorFactory> = {
   docker: dockerExtractor,
   static: staticExtractor,
   go: goExtractor,
+  java: javaExtractor,
   rust: rustExtractor,
 };
 
 const MANIFEST_ECOSYSTEM: Record<string, string> = {
   "package.json": "node",
   "pyproject.toml": "python",
+  "requirements.txt": "python",
+  "setup.py": "python",
   Dockerfile: "docker",
   Procfile: "docker",
   "go.mod": "go",
   "Cargo.toml": "rust",
+  "pom.xml": "java",
+  "build.gradle": "java",
+  "build.gradle.kts": "java",
   "index.html": "static",
 };
 
@@ -36,6 +43,7 @@ const FILE_ECOSYSTEM: [RegExp, string][] = [
   [/\.py$/, "python"],
   [/\.go$/, "go"],
   [/\.rs$/, "rust"],
+  [/\.java$/, "java"],
   [/\.html$/, "static"],
   [/next\.config\.(?:ts|js|mjs|cjs)$/, "static"],
 ];

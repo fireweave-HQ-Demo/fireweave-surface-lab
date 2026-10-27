@@ -118,14 +118,40 @@ describe('detectSurfaces — verdicts are named, and each name means something',
     // failure mode the whole verdict vocabulary exists to prevent.
     const root = repo({
       'package.json': pkg({ name: 'shell-only', private: true }),
-      Dockerfile: 'FROM alpine\n',
-      'run.sh': '#!/bin/sh\necho hi\n',
+      Dockerfile: 'CMD ["python", "server.py"]\n',
+      'server.py': 'print("hi")\n',
     });
     const r = await detectSurfaces({ cwd: root });
     const z = at(r, '.');
     expect(z).toBeDefined();
     expect(z?.verdict).toBe('undecidable');
     expect(z?.surface).toBeNull();
+    expect(z?.evidence.some((item) => item.detail === 'Dockerfile runs server.py')).toBe(true);
+  });
+
+  test('a browser dev server is not an entrypoint', async () => {
+    const root = repo({
+      'package.json': pkg({
+        name: 'web',
+        private: true,
+        scripts: { start: 'react-scripts start', build: 'react-scripts build' },
+        dependencies: { 'react-dom': '^18.0.0' },
+      }),
+      'public/index.html': '<div id="root"></div>\n',
+      'src/index.js': 'export const x = 1;\n',
+    });
+    const r = await detectSurfaces({ cwd: root });
+    const z = at(r, '.');
+    expect(z?.kind).not.toBe('app');
+    expect(z?.evidence.some((item) => item.kind === 'entrypoint.package-json-script')).toBe(false);
+  });
+
+  test('a Dockerfile that only starts nginx is not deployability evidence', async () => {
+    const root = repo({
+      Dockerfile: 'FROM nginx:alpine\nCMD ["nginx", "-g", "daemon off;"]\n',
+    });
+    const r = await detectSurfaces({ cwd: root });
+    expect(at(r, '.')).toBeUndefined();
   });
 });
 
@@ -139,7 +165,7 @@ describe('detectSurfaces — app vs library is a GRAPH question', () => {
     'packages/api/package.json': pkg({
       name: '@x/api',
       private: true,
-      scripts: { start: 'node index.js' },
+      scripts: { start: 'node index.ts' },
       dependencies: { '@x/core': 'workspace:*', elysia: '^1.0.0' },
     }),
     'packages/api/index.ts': 'export const a = 1;\n',

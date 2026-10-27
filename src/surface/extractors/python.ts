@@ -5,7 +5,9 @@ import { cite, readText, type Idiom } from "./scan";
 
 const IDIOMS: Idiom[] = [
   { grep: /\buvicorn\.run\s*\(/, construct: "listener" },
-  { grep: /\bapp\.run\s*\(/, construct: "listener" },
+  { grep: /\b(?!asyncio\b)(?!worker\b)\w+\.run\s*\(/, construct: "listener" },
+  { grep: /\.run_app\s*\(/, construct: "listener" },
+  { grep: /\bexecute_from_command_line\s*\(/, construct: "listener" },
   { grep: /\.serve_forever\s*\(/, construct: "listener" },
   { grep: /\bThreadingHTTPServer\s*\(/, construct: "listener" },
   { grep: /\bHTTPServer\s*\(/, construct: "listener" },
@@ -108,7 +110,7 @@ export function pythonExtractor(repoRoot: string): Extractor {
       const abs = join(unitDir(repoRoot, unit), relative);
       const text = await readText(abs);
       if (text === null) return { unresolved: `missing ${relative}` };
-      const hit = cite(text, IDIOMS);
+      const hit = cite(text, IDIOMS, repoRelative(repoRoot, abs));
       if (!hit) return { unresolved: `${relative} has no execution construct` };
       return { file: repoRelative(repoRoot, abs), line: hit.line };
     },

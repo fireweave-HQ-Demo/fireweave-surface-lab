@@ -214,6 +214,7 @@ async function main(): Promise<void> {
       const diffs = byAction(
         shadow.diffs.map((diff) => toReportDiff(diff, confidenceOf.get(diff.unit) ?? ''))
       );
+      console.log(`\n${shadow.summary}`);
       console.log(`\nAgent diff (${shadow.mode})\n${formatDiff(diffs)}`);
       const reportPath = join(process.cwd(), 'surface-report.html');
       await writeFile(

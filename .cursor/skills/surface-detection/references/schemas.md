@@ -7,9 +7,9 @@ Emit one JSON object per surface. The machine shapes are `assets/claim.schema.js
 | Field | Required | Rule |
 | --- | --- | --- |
 | `unit` | always | Repo-relative path. `.` is the workspace root. |
-| `claim` | always | `runs`, `does_not_run`, or `uncertain`. |
+| `claim` | always | `runs`, `runs_not_surface`, `does_not_run`, or `uncertain`. |
 | `category` | always | One row from `constructs.md`. |
-| `entrypoint` | when `claim` is `runs` | `{file, line, snippet}`. `line` is 1-based. The snippet is the cited line, not a paraphrase. |
+| `entrypoint` | when `claim` is `runs` or `runs_not_surface` | `{file, line, snippet}`. `line` is 1-based. The snippet is the cited line, not a paraphrase. |
 | `evidence_kind` | when `claim` is `runs` | `resolved_declaration` when you followed a script, bin, CMD, or ENTRYPOINT to that line. Otherwise `implicit_construct`. |
 | `searched` | always | `{globs, greps, files_opened}`. For `does_not_run`, all three carry the search: at least one declaration-resolution attempt, one implicit sweep, and every file opened. An empty object is a reject. |
 | `counter_hypothesis` | always | The specific fact that would make this claim wrong. |
@@ -21,7 +21,7 @@ Emit one JSON object per surface. The machine shapes are `assets/claim.schema.js
 | `execution_id` | when one path has two surfaces | Distinguishes a second claim on the same `unit`. |
 | `reason` | when `claim` is `uncertain` | What was checked and what is missing. |
 
-`runs` plus `library` or `tooling` is rejected. A negative without `files_opened` is rejected.
+`runs` plus `library` or `tooling` is rejected. A construct that executes but is tooling is `runs_not_surface`, with the citation, and is not a surface. A negative without `files_opened` is rejected.
 
 ## Verified claim
 

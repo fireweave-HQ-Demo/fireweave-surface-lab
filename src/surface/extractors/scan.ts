@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { codeLines } from "../lex";
 
 export type Idiom = {
   grep: RegExp;
@@ -33,36 +34,33 @@ export type Hit = {
   evidence_kind: NonNullable<Idiom["evidence_kind"]>;
 };
 
-function isComment(line: string): boolean {
-  const trimmed = line.trim();
-  return trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("*") || trimmed.startsWith("#");
+function inCode(code: string, start: number, length: number): boolean {
+  const slice = code.slice(start, start + length);
+  return [...slice].some((char) => char !== " " && char !== "\t");
 }
 
-/** Every matching line, strongest construct first, then earliest line. Comments are not matches. */
-export function citeAll(text: string, idioms: readonly Idiom[]): Hit[] {
+/** Every matching line, strongest construct first, then earliest line. Comments and strings are not matches. */
+export function citeAll(text: string, idioms: readonly Idiom[], file = ""): Hit[] {
   const lines = text.split(/\r?\n/);
+  const codes = codeLines(text, file);
   const hits: Hit[] = [];
-  let block = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
-    if (block) {
-      if (line.includes("*/")) block = false;
-      continue;
-    }
-    if (line.includes("/*") && !line.includes("*/")) {
-      block = true;
-      continue;
-    }
-    if (isComment(line)) continue;
+    const code = codes[i] ?? "";
     for (const idiom of idioms) {
-      idiom.grep.lastIndex = 0;
-      if (!idiom.grep.test(line)) continue;
-      hits.push({
-        line: i + 1,
-        snippet: line.trim().slice(0, 180),
-        construct: idiom.construct,
-        evidence_kind: idiom.evidence_kind ?? "implicit_construct",
-      });
+      const flags = idiom.grep.flags.includes("g") ? idiom.grep.flags : `${idiom.grep.flags}g`;
+      const pattern = new RegExp(idiom.grep.source, flags);
+      let match: RegExpExecArray | null;
+      while ((match = pattern.exec(line))) {
+        if (!inCode(code, match.index, match[0].length)) continue;
+        hits.push({
+          line: i + 1,
+          snippet: line.trim().slice(0, 180),
+          construct: idiom.construct,
+          evidence_kind: idiom.evidence_kind ?? "implicit_construct",
+        });
+        break;
+      }
     }
   }
   return hits.sort(
@@ -71,8 +69,8 @@ export function citeAll(text: string, idioms: readonly Idiom[]): Hit[] {
 }
 
 /** Earliest line of the strongest construct. Line numbers are 1-based. */
-export function cite(text: string, idioms: readonly Idiom[]): Hit | null {
-  return citeAll(text, idioms)[0] ?? null;
+export function cite(text: string, idioms: readonly Idiom[], file = ""): Hit | null {
+  return citeAll(text, idioms, file)[0] ?? null;
 }
 
 export function matchesNear(text: string, line: number, idioms: readonly Idiom[]): boolean {

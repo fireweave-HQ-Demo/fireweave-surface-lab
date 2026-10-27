@@ -1,4 +1,5 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { join } from "node:path";
@@ -18,6 +19,8 @@ export type CatalogRepo = {
   probes: string;
   note: string;
   runnable?: boolean;
+  /** When set, these repos are cloned into one parent and investigated together. */
+  clones?: { dir: string; url: string }[];
 };
 
 export type Catalog = {
@@ -94,6 +97,27 @@ function agentLabel(diff: Diff): string {
   return claim.claim === "runs" ? "runs(verified)" : claim.claim;
 }
 
+async function materialise(repo: CatalogRepo): Promise<string> {
+  if (!repo.clones || repo.clones.length === 0) {
+    const link = parseGitLink(repo.url);
+    if (!link) throw new Error(`${repo.id} has a URL the checkout cannot use: ${repo.url}`);
+    return checkout(link);
+  }
+  const parent = await mkdtemp(join(tmpdir(), "surface-suite-"));
+  try {
+    for (const clone of repo.clones) {
+      const link = parseGitLink(clone.url);
+      if (!link) throw new Error(`${repo.id} clone ${clone.url} is not a GitHub repository`);
+      const dir = await checkout(link);
+      await rename(dir, join(parent, clone.dir));
+    }
+    return parent;
+  } catch (error) {
+    await rm(parent, { recursive: true, force: true });
+    throw error;
+  }
+}
+
 export async function runCatalogRepo(repo: CatalogRepo): Promise<SuiteResult> {
   if (repo.runnable === false) {
     return {
@@ -109,11 +133,9 @@ export async function runCatalogRepo(repo: CatalogRepo): Promise<SuiteResult> {
       error: repo.note,
     };
   }
-  const link = parseGitLink(repo.url);
-  if (!link) throw new Error(`${repo.id} has a URL the checkout cannot use: ${repo.url}`);
   console.log(`\n${repo.name}  ${repo.url}`);
   console.log(repo.note);
-  const dir = await checkout(link);
+  const dir = await materialise(repo);
   try {
     const found = await detectSurfaces({ cwd: dir });
     const { surfaces, held } = partitionSurfaces(found.surfaces);
@@ -168,6 +190,7 @@ export async function runCatalogRepo(repo: CatalogRepo): Promise<SuiteResult> {
         exceptions: [...convention.exceptions],
       })),
     };
+    console.log(shadow.summary);
     console.log(
       `${result.selected.length} selected from ${result.zones} zones. ${result.held.length} not selected. agreed ${result.agreed.length}. disagreements ${result.disagreements.length}.`
     );

@@ -24,6 +24,18 @@ const SERVICE = [
   /\baxum::serve\s*\(/,
   /\bactix_web::HttpServer/,
   /\bget_wsgi_application\s*\(/,
+  /\b(?!asyncio\b)(?!worker\b)\w+\.run\s*\(/,
+  /\.run_app\s*\(/,
+  /\bexecute_from_command_line\s*\(/,
+  /\.Run\s*\(/,
+  /\.Start\s*\(/,
+  /\.Listen\s*\(/,
+  /\bHttpServer::new\s*\(/,
+  /\bServer::bind\s*\(/,
+  /\.bind\s*\(/,
+  /\.serve\s*\(/,
+  /\bSpringApplication\.run\s*\(/,
+  /\bport\s*\(\s*\d+/,
 ];
 
 /** `next start` / `gunicorn` live on the manifest line. They are the listener. */
@@ -42,6 +54,7 @@ const WORKER = [
   /\b@shared_task\b/,
   /\.consume\s*\(/,
   /\breceive_message\s*\(/,
+  /\.start\s*(?:::|<|\()/,
 ];
 
 const STATIC_WEB = [

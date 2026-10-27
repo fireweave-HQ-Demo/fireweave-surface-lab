@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { investigateUnit } from "../investigate";
 import type { Claim } from "../types";
 import { verify } from "../verify";
 
@@ -238,6 +239,35 @@ describe("verify", () => {
     expect(result.verified).toBe(false);
     expect(result.downgraded_to).toBe("uncertain");
     expect(result.rejection_reason).toContain("not source");
+  });
+
+  test("a compose file with no program is a verified non-surface", async () => {
+    const root = repo({ "compose.yaml": "services:\n  db:\n    image: postgres\n" });
+    const claim = await investigateUnit(
+      root,
+      { path: ".", manifests: ["compose.yaml"], languages: [] },
+      { nested: false, imported: false }
+    );
+    expect(claim.claim).toBe("does_not_run");
+    const checked = await verify(root, claim);
+    expect(checked.verified).toBe(true);
+    expect(checked.claim).toBe("does_not_run");
+  });
+
+  test("a main guard is runs_not_surface and keeps its citation", async () => {
+    const root = repo({ "tool.py": "if __name__ == \"__main__\":\n    pass\n" });
+    const claim = await investigateUnit(
+      root,
+      { path: ".", manifests: [], languages: ["python"] },
+      { nested: false, imported: false }
+    );
+    expect(claim.claim).toBe("runs_not_surface");
+    expect(claim.category).toBe("tooling");
+    expect(claim.entrypoint?.file).toBe("tool.py");
+    expect(claim.entrypoint?.line).toBe(1);
+    const checked = await verify(root, claim);
+    expect(checked.verified).toBe(true);
+    expect(checked.claim).toBe("runs_not_surface");
   });
 
   test("listen() inside a function nobody calls is rejected", async () => {

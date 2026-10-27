@@ -1,20 +1,11 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
+import { isManifestName } from "../../manifests";
 import { ecosystemForManifest, ecosystemsForFiles } from "./extractors";
 import { SKIP_DIRS } from "./files";
 import type { Unit } from "./types";
 
-const MANIFESTS = new Set([
-  "package.json",
-  "pyproject.toml",
-  "go.mod",
-  "Cargo.toml",
-  "Dockerfile",
-  "Procfile",
-  "index.html",
-]);
-
-const SOURCE = /\.(py|ts|tsx|js|mjs|cjs|go|rs|html)$/;
+const SOURCE = /\.(py|ts|tsx|js|mjs|cjs|go|rs|java|html)$/;
 
 export type Exclusion = { path: string; reason: string; review: boolean };
 
@@ -64,7 +55,7 @@ async function scan(
   } catch {
     return;
   }
-  const names = entries.filter((entry) => entry.isFile() && MANIFESTS.has(entry.name)).map((entry) => entry.name);
+  const names = entries.filter((entry) => entry.isFile() && isManifestName(entry.name)).map((entry) => entry.name);
   if (names.length > 0) manifests.set(rel || ".", names.sort());
   for (const entry of entries) {
     if (!entry.isDirectory() || entry.name === ".surface-cache") continue;
@@ -91,7 +82,7 @@ async function containsManifest(dir: string, depth: number): Promise<boolean> {
     return false;
   }
   for (const entry of entries) {
-    if (entry.isFile() && MANIFESTS.has(entry.name)) return true;
+    if (entry.isFile() && isManifestName(entry.name)) return true;
     if (entry.isDirectory() && !SKIP_DIRS.has(entry.name)) {
       if (await containsManifest(join(dir, entry.name), depth + 1)) return true;
     }
