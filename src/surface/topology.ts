@@ -113,7 +113,7 @@ async function manifestless(
   }
   const path = rel || ".";
   const hasSource = entries.some((entry) => entry.isFile() && SOURCE.test(entry.name) && !entry.name.endsWith(".d.ts"));
-  if (hasSource && !manifestDirs.has(path) && !insideManifest(path, manifestDirs)) {
+  if (hasSource && !manifestDirs.has(path) && !ownedByManifest(path, manifestDirs)) {
     const files = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
     units.push({
       path,
@@ -127,6 +127,14 @@ async function manifestless(
     if (manifestDirs.has(relPath)) continue;
     await manifestless(join(dir, entry.name), relPath, manifestDirs, units);
   }
+}
+
+/** Source directly inside a manifest unit belongs to that unit. */
+function ownedByManifest(path: string, manifestDirs: Set<string>): boolean {
+  if (path === ".") return false;
+  const parent = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : ".";
+  if (manifestDirs.has(parent)) return true;
+  return insideManifest(path, manifestDirs);
 }
 
 /** True when a non-root ancestor is itself a manifest unit. */

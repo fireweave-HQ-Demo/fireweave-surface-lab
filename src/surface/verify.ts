@@ -80,6 +80,18 @@ export async function verify(repoRoot: string, claim: Claim): Promise<VerifiedCl
     if (!matchesNear(text, claim.entrypoint.line, tool.executionIdioms())) {
       return reject(claim, "cited line does not match an execution construct");
     }
+    if (claim.evidence_kind === "container_cmd") {
+      const docker = extractor("docker", repoRoot);
+      if (!docker) return reject(claim, "no docker extractor");
+      const facts = await docker.readManifest(unitFor(claim));
+      const resolutions = await Promise.all(
+        facts.scripts.map((decl) => docker.resolveDeclaration(unitFor(claim), decl))
+      );
+      const matched = resolutions.some(
+        (resolution) => "file" in resolution && resolution.file === claim.entrypoint.file
+      );
+      if (!matched) return reject(claim, "container command does not name the cited file");
+    }
     if (claim.evidence_kind === "resolved_declaration") {
       const facts = await tool.readManifest(unitFor(claim));
       const declarations = [...facts.scripts, ...facts.bins];

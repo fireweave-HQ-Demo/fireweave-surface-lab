@@ -10,7 +10,7 @@ export interface ManifestFacts {
   exportsOnly?: boolean;
 }
 
-export type Resolution = { file: string; line: number } | { unresolved: string };
+export type Resolution = { file: string; line: number } | { file: string } | { unresolved: string };
 
 /**
  * The only language-specific surface. The chain calls these methods and

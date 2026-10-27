@@ -86,15 +86,41 @@ export async function investigateUnit(
       continue;
     }
     const text = await readText(join(repoRoot, resolution.file));
-    const hit = text ? cite(text, tool.executionIdioms()) : null;
-    if (!hit || hit.line !== resolution.line) continue;
-    resolved.push({ ...hit, file: resolution.file, ecosystem: tool.ecosystem, fromDeclaration: true });
+    if (text === null) {
+      unresolved.push(`${lead.lead}: missing ${resolution.file}`);
+      continue;
+    }
+    const cited =
+      "line" in resolution
+        ? cite(text, tool.executionIdioms())
+        : tools
+            .map((candidate) => {
+              const hit = cite(text, candidate.executionIdioms());
+              return hit ? { hit, ecosystem: candidate.ecosystem } : null;
+            })
+            .filter((item): item is { hit: Hit; ecosystem: string } => item !== null)
+            .sort((a, b) => (RANK[b.hit.construct] ?? 0) - (RANK[a.hit.construct] ?? 0))[0];
+    if (!cited) continue;
+    const hit = "hit" in cited ? cited.hit : cited;
+    const ecosystem = "hit" in cited ? cited.ecosystem : tool.ecosystem;
+    if ("line" in resolution && hit.line !== resolution.line) continue;
+    const fromContainer = tool.ecosystem === "docker";
+    resolved.push({
+      ...hit,
+      file: resolution.file,
+      ecosystem,
+      fromDeclaration: !fromContainer,
+      ...(fromContainer ? { evidence_kind: "container_cmd" as const } : {}),
+    });
     if (!searched.files_opened.includes(resolution.file)) searched.files_opened.push(resolution.file);
   }
 
   const hunted: Found[] = [];
   if (resolved.length === 0) {
     for (const file of scope.files) {
+      if (/(?:^|\/)(Dockerfile|Procfile|package\.json|pyproject\.toml|go\.mod|Cargo\.toml)$/.test(file)) {
+        continue;
+      }
       const abs = join(repoRoot, file);
       const text = await readText(abs);
       if (text === null) continue;

@@ -1,6 +1,9 @@
 import type { Unit } from "../types";
+import { dockerExtractor } from "./docker";
+import { goExtractor } from "./go";
 import { nodeExtractor } from "./node";
 import { pythonExtractor } from "./python";
+import { rustExtractor } from "./rust";
 import { staticExtractor } from "./static";
 
 export type { Extractor, ManifestFacts, Resolution } from "./contract";
@@ -12,7 +15,10 @@ export type ExtractorFactory = (repoRoot: string) => Extractor;
 const FACTORIES: Record<string, ExtractorFactory> = {
   node: nodeExtractor,
   python: pythonExtractor,
+  docker: dockerExtractor,
   static: staticExtractor,
+  go: goExtractor,
+  rust: rustExtractor,
 };
 
 const MANIFEST_ECOSYSTEM: Record<string, string> = {
