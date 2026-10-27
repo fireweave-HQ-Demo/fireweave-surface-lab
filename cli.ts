@@ -7,6 +7,8 @@ import { confirmAgentApps } from './agent';
 import { detectSurfaces } from './detect/detect-surfaces';
 import { mergeRows, strayAgentPurposes, type ConfirmRow, type ScannerRow } from './merge';
 import { partitionSurfaces, toScannerRow } from './select';
+import { runSurfacePipeline } from './src/surface/pipeline';
+import type { Diff } from './src/surface/types';
 
 const GITHUB =
   /^(?:https:\/\/github\.com\/|git@github\.com:)([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?(?:\/pull\/(\d+))?\/?$/;
@@ -74,6 +76,34 @@ function formatTable(header: readonly string[], body: readonly (readonly string[
   const line = (cells: readonly string[]) =>
     cells.map((cell, i) => cell.padEnd(widths[i]!)).join('  ');
   return [line(header), ...body.map(line)].join('\n');
+}
+
+function scannerCell(diff: Diff): string {
+  if (diff.scanner.selected) return 'surface';
+  if (diff.scanner.kind === 'library') return 'library';
+  return 'drop';
+}
+
+function agentCell(diff: Diff): string {
+  const claim = diff.agent;
+  if (!claim.verified || claim.downgraded_to === 'uncertain' || claim.claim === 'uncertain') {
+    return 'uncertain';
+  }
+  return claim.claim === 'runs' ? 'runs(verified)' : claim.claim;
+}
+
+function formatDiff(diffs: readonly Diff[]): string {
+  return formatTable(
+    ['Unit', 'Scanner', 'Agent', 'Cell', 'Action', 'Citation'],
+    diffs.map((diff) => [
+      diff.unit,
+      scannerCell(diff),
+      agentCell(diff),
+      diff.cell,
+      diff.action,
+      diff.agent.entrypoint ? `${diff.agent.entrypoint.file}:${diff.agent.entrypoint.line}` : '—',
+    ])
+  );
 }
 
 function formatRows(rows: readonly ConfirmRow[]): string {
@@ -147,6 +177,39 @@ async function main(): Promise<void> {
             zone.reason,
           ])
         )}`
+      );
+    }
+    try {
+      const shadow = await runSurfacePipeline(
+        dir,
+        found.surfaces.map((zone) => ({
+          path: zone.path,
+          verdict: zone.verdict,
+          kind: zone.kind,
+          selected: selected.has(zone.path),
+        }))
+      );
+      console.log(`\nAgent diff (shadow)\n${formatDiff(shadow.diffs)}`);
+      if (shadow.conventions.length > 0) {
+        console.log('\nConventions');
+        for (const convention of shadow.conventions) {
+          console.log(convention.rule);
+          for (const line of convention.evidence) console.log(`  ${line}`);
+          console.log(
+            convention.exceptions.length > 0
+              ? `  exceptions: ${convention.exceptions.join(', ')}`
+              : '  exceptions: none'
+          );
+        }
+      }
+      console.log('\nExcluded');
+      if (shadow.excluded.length === 0) console.log('(none)');
+      for (const item of shadow.excluded) {
+        console.log(`${item.path}  ${item.reason}${item.review ? '  review' : ''}`);
+      }
+    } catch (error) {
+      console.error(
+        `agent diff failed: ${error instanceof Error ? error.message : 'investigation failed'}`
       );
     }
   } finally {
