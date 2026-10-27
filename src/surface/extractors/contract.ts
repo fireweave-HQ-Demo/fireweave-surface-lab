@@ -22,6 +22,7 @@ export interface Extractor {
   resolveDeclaration(unit: Unit, decl: string): Promise<Resolution>;
   executionIdioms(): { grep: RegExp; construct: string }[];
   exclusions(): RegExp[];
+  packageName?(unit: Unit): Promise<string | null>;
 }
 
 export function unitDir(repoRoot: string, unit: Unit): string {

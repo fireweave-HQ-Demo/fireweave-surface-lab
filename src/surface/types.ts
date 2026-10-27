@@ -46,6 +46,8 @@ export type Claim = {
   counter_checked: string;
   /** Set when Level 1 flagged this unit as a convention exception. Investigation still runs. */
   convention_flag?: string;
+  /** Orient-step context. Not a selection signal. */
+  placeholder_signals?: string[];
   coverage: {
     inspected: number;
     skipped: { path: string; reason: string }[];

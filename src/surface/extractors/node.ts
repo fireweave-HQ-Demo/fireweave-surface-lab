@@ -7,10 +7,13 @@ const IDIOMS: Idiom[] = [
   { grep: /\.listen\s*\(/, construct: "listener" },
   { grep: /\bserve\s*\(/, construct: "listener" },
   { grep: /\bcreateServer\s*\(/, construct: "listener" },
-  { grep: /\bnew\s+Hono\s*\(/, construct: "listener" },
+  { grep: /\bnew\s+Hono\s*\(/, construct: "listener", evidence_kind: "framework_ctor" },
   { grep: /\bhttp\.createServer\s*\(/, construct: "listener" },
   { grep: /\bapp\.listen\s*\(/, construct: "listener" },
-  { grep: /\bexport\s+(?:async\s+)?function\s+(?:GET|POST|PUT|PATCH|DELETE|HEAD)\b/, construct: "route_handler" },
+  {
+    grep: /\bexport\s+(?:async\s+)?function\s+(?:GET|POST|PUT|PATCH|DELETE|HEAD)\b/,
+    construct: "route_handler",
+  },
 ];
 
 const TOOLING = /^(?:vitest|jest|eslint|prettier|tsc|biome|playwright|next\s+build|next\s+lint)\b/;
@@ -34,6 +37,16 @@ export function nodeExtractor(repoRoot: string): Extractor {
       /\.(?:test|spec)\.(?:ts|tsx|js|mjs|cjs)$/,
     ],
     executionIdioms: () => IDIOMS,
+    async packageName(unit: Unit): Promise<string | null> {
+      const text = await readText(join(unitDir(repoRoot, unit), "package.json"));
+      if (!text) return null;
+      try {
+        const name = (JSON.parse(text) as { name?: unknown }).name;
+        return typeof name === "string" ? name : null;
+      } catch {
+        return null;
+      }
+    },
     async readManifest(unit: Unit): Promise<ManifestFacts> {
       const text = await readText(join(unitDir(repoRoot, unit), "package.json"));
       if (!text) return { scripts: [], bins: [], deps: {} };

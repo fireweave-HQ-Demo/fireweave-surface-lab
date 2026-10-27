@@ -1,6 +1,7 @@
 import type { Unit } from "../types";
 import { nodeExtractor } from "./node";
 import { pythonExtractor } from "./python";
+import { staticExtractor } from "./static";
 
 export type { Extractor, ManifestFacts, Resolution } from "./contract";
 export { repoRelative, unitDir } from "./contract";
@@ -11,6 +12,7 @@ export type ExtractorFactory = (repoRoot: string) => Extractor;
 const FACTORIES: Record<string, ExtractorFactory> = {
   node: nodeExtractor,
   python: pythonExtractor,
+  static: staticExtractor,
 };
 
 const MANIFEST_ECOSYSTEM: Record<string, string> = {
@@ -29,6 +31,7 @@ const FILE_ECOSYSTEM: [RegExp, string][] = [
   [/\.go$/, "go"],
   [/\.rs$/, "rust"],
   [/\.html$/, "static"],
+  [/next\.config\.(?:ts|js|mjs|cjs)$/, "static"],
 ];
 
 export function ecosystemForManifest(name: string): string | null {

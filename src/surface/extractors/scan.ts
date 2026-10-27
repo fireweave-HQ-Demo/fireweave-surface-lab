@@ -1,6 +1,10 @@
 import { readFile } from "node:fs/promises";
 
-export type Idiom = { grep: RegExp; construct: string };
+export type Idiom = {
+  grep: RegExp;
+  construct: string;
+  evidence_kind?: "framework_ctor" | "main_guard" | "container_cmd" | "implicit_construct";
+};
 
 /** Higher wins when a file matches more than one construct. Language-agnostic labels. */
 const RANK: Record<string, number> = {
@@ -22,7 +26,12 @@ export async function readText(path: string): Promise<string | null> {
   }
 }
 
-export type Hit = { line: number; snippet: string; construct: string };
+export type Hit = {
+  line: number;
+  snippet: string;
+  construct: string;
+  evidence_kind: NonNullable<Idiom["evidence_kind"]>;
+};
 
 /** Earliest line of the strongest construct. Line numbers are 1-based. */
 export function cite(text: string, idioms: readonly Idiom[]): Hit | null {
@@ -37,7 +46,12 @@ export function cite(text: string, idioms: readonly Idiom[]): Hit | null {
       const rank = RANK[idiom.construct] ?? 0;
       if (rank > bestRank) {
         bestRank = rank;
-        best = { line: i + 1, snippet: line.trim().slice(0, 180), construct: idiom.construct };
+        best = {
+          line: i + 1,
+          snippet: line.trim().slice(0, 180),
+          construct: idiom.construct,
+          evidence_kind: idiom.evidence_kind ?? "implicit_construct",
+        };
       }
     }
   }

@@ -6,15 +6,15 @@ import { cite, readText, type Idiom } from "./scan";
 const IDIOMS: Idiom[] = [
   { grep: /\buvicorn\.run\s*\(/, construct: "listener" },
   { grep: /\bapp\.run\s*\(/, construct: "listener" },
-  { grep: /\bFastAPI\s*\(/, construct: "listener" },
-  { grep: /\bFlask\s*\(/, construct: "listener" },
+  { grep: /\bFastAPI\s*\(/, construct: "listener", evidence_kind: "framework_ctor" },
+  { grep: /\bFlask\s*\(/, construct: "listener", evidence_kind: "framework_ctor" },
   { grep: /\.serve_forever\s*\(/, construct: "listener" },
   { grep: /\bThreadingHTTPServer\s*\(/, construct: "listener" },
   { grep: /\bHTTPServer\s*\(/, construct: "listener" },
   { grep: /\basyncio\.run\s*\(/, construct: "event_loop" },
   { grep: /while\s+True\s*:/, construct: "event_loop" },
   { grep: /\bargparse\./, construct: "cli" },
-  { grep: /if\s+__name__\s*==\s*["']__main__["']/, construct: "main_guard" },
+  { grep: /if\s+__name__\s*==\s*["']__main__["']/, construct: "main_guard", evidence_kind: "main_guard" },
 ];
 
 function bracketValue(text: string, key: string): string | null {
@@ -75,6 +75,11 @@ export function pythonExtractor(repoRoot: string): Extractor {
       /_test\.py$/,
     ],
     executionIdioms: () => IDIOMS,
+    async packageName(unit: Unit): Promise<string | null> {
+      const text = await readText(join(unitDir(repoRoot, unit), "pyproject.toml"));
+      const name = text ? /^name\s*=\s*"([^"]+)"/m.exec(text)?.[1] : undefined;
+      return name ?? null;
+    },
     async readManifest(unit: Unit): Promise<ManifestFacts> {
       const text = await readText(join(unitDir(repoRoot, unit), "pyproject.toml"));
       if (!text) return { scripts: [], bins: [], deps: {} };
