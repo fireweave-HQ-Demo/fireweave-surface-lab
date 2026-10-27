@@ -44,7 +44,7 @@ describe("node extractor", () => {
     expect(facts.scripts).toContain("dev: tsx src/server.ts");
     expect(facts.deps.hono).toBe("4.9.9");
     const resolved = await tool.resolveDeclaration(api, "dev: tsx src/server.ts");
-    expect(resolved).toEqual({ file: "apps/api/src/server.ts", line: 2 });
+    expect(resolved).toEqual({ file: "apps/api/src/server.ts", line: 3 });
   });
 
   test("a filename that is not the declaration target is not the resolution", async () => {
@@ -93,7 +93,7 @@ describe("python extractor", () => {
     const tool = pythonExtractor("/tmp");
     const labels = tool.executionIdioms().map((idiom) => idiom.grep.source);
     expect(labels.some((source) => source.includes("uvicorn"))).toBe(true);
-    expect(labels.some((source) => source.includes("FastAPI"))).toBe(true);
+    expect(labels.some((source) => source.includes("serve_forever"))).toBe(true);
     expect(labels.some((source) => source.includes("__name__"))).toBe(true);
     expect(labels.some((source) => source.includes("while"))).toBe(true);
     expect(tool.exclusions().some((pattern) => pattern.test(".venv/lib/x.py"))).toBe(true);

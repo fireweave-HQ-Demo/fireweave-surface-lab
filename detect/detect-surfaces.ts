@@ -438,9 +438,15 @@ function classifyKind(
   // the artifact it produces has no in-repo consumer, so a deploy is the only
   // thing it can be for. For a depended-upon zone the same script means the
   // opposite — it is building for its siblings — so it must not promote there.
+  // A published package (versioned, with exports) that only builds is a library
+  // someone else imports. A build script is not a listener. A private site
+  // with no in-repo importer is still an app: the artifact is for a deploy.
+  const published =
+    zone.manifest?.private !== true &&
+    (zone.manifest?.exports !== undefined || zone.manifest?.files !== undefined);
   const hasEntrypoint =
-    hasEntrypointEvidence || (buildsArtifact && dependents === 0);
-  if (buildsArtifact && dependents === 0 && !hasEntrypointEvidence) {
+    hasEntrypointEvidence || (buildsArtifact && dependents === 0 && !published);
+  if (buildsArtifact && dependents === 0 && !hasEntrypointEvidence && !published) {
     evidence.push({
       kind: 'deployability.unimported-build',
       path: zone.path,

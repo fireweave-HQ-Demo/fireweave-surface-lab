@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "verified-claim.schema.json",
+  "title": "VerifiedClaim",
+  "allOf": [
+    { "$ref": "claim.schema.json" },
+    {
+      "type": "object",
+      "required": ["verified"],
+      "properties": {
+        "verified": { "type": "boolean" },
+        "rejection_reason": { "type": "string", "minLength": 1 },
+        "downgraded_to": { "const": "uncertain" }
+      }
+    }
+  ]
+}

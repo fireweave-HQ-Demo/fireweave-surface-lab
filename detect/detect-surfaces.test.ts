@@ -194,6 +194,20 @@ describe('detectSurfaces — app vs library is a GRAPH question', () => {
     expect(at(r, 'packages/site')?.kind).toBe('app');
     expect(at(r, 'packages/site')?.surface).toBe('web');
   });
+
+  test('a published package that only builds is not an app', async () => {
+    const files = workspace();
+    files['packages/adapter/package.json'] = pkg({
+      name: '@x/adapter',
+      version: '1.0.0',
+      files: ['dist'],
+      exports: { '.': './dist/index.js' },
+      scripts: { build: 'tsc' },
+    });
+    files['packages/adapter/src/handler.ts'] = 'export const handler = () => ({});\n';
+    const r = await detectSurfaces({ cwd: repo(files) });
+    expect(at(r, 'packages/adapter')?.kind).not.toBe('app');
+  });
 });
 
 describe('detectSurfaces — unreadable zones are surfaced, never swallowed', () => {

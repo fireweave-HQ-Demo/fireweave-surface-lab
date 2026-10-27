@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "claim.schema.json",
+  "title": "Claim",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "unit",
+    "claim",
+    "category",
+    "searched",
+    "counter_hypothesis",
+    "counter_checked",
+    "coverage",
+    "confidence"
+  ],
+  "properties": {
+    "unit": { "type": "string", "minLength": 1 },
+    "claim": { "enum": ["runs", "does_not_run", "uncertain"] },
+    "category": {
+      "enum": ["service", "worker", "static-web", "cli", "library", "tooling", "placeholder", "ambiguous"]
+    },
+    "entrypoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "line", "snippet"],
+      "properties": {
+        "file": { "type": "string", "minLength": 1 },
+        "line": { "type": "integer", "minimum": 1 },
+        "snippet": { "type": "string", "minLength": 1 }
+      }
+    },
+    "evidence_kind": {
+      "enum": ["resolved_declaration", "implicit_construct", "framework_ctor", "main_guard", "container_cmd"]
+    },
+    "searched": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["globs", "greps", "files_opened"],
+      "properties": {
+        "globs": { "type": "array", "items": { "type": "string" } },
+        "greps": { "type": "array", "items": { "type": "string" } },
+        "files_opened": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "counter_hypothesis": { "type": "string", "minLength": 1 },
+    "counter_checked": { "type": "string", "minLength": 1 },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inspected", "skipped", "uncertain"],
+      "properties": {
+        "inspected": { "type": "integer", "minimum": 0 },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "reason"],
+            "properties": {
+              "path": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "uncertain": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "convention_flag": { "type": "string" },
+    "placeholder_signals": { "type": "array", "items": { "type": "string" } },
+    "execution_id": { "type": "string", "minLength": 1 },
+    "reason": { "type": "string", "minLength": 1 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "claim": { "const": "runs" } }, "required": ["claim"] },
+      "then": { "required": ["entrypoint", "evidence_kind"] }
+    },
+    {
+      "if": { "properties": { "claim": { "const": "does_not_run" } }, "required": ["claim"] },
+      "then": {
+        "properties": {
+          "searched": {
+            "properties": {
+              "files_opened": { "minItems": 1 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "claim": { "const": "uncertain" } }, "required": ["claim"] },
+      "then": { "required": ["reason"] }
+    }
+  ]
+}

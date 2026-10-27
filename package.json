@@ -5,6 +5,8 @@
   "scripts": {
     "start": "bun server.ts",
     "cli": "bun cli.ts",
+    "suite": "bun suite.ts",
+    "sandbox": "bun opensandbox/run.ts",
     "test": "bun test"
   },
   "dependencies": {

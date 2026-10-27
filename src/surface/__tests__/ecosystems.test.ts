@@ -31,7 +31,7 @@ describe("other ecosystems", () => {
   test("a Dockerfile command is followed into the program file", async () => {
     const root = repo({
       Dockerfile: 'FROM python:3.12\nCMD ["python", "server.py"]\nEXPOSE 8080\n',
-      "server.py": "from fastapi import FastAPI\napp = FastAPI()\n",
+      "server.py": "from fastapi import FastAPI\napp = FastAPI()\nuvicorn.run(app)\n",
     });
     const result = await runSurfacePipeline(root, [
       { path: ".", verdict: "probable", kind: "unknown", selected: true },
@@ -41,7 +41,7 @@ describe("other ecosystems", () => {
     expect(claim?.claim).toBe("runs");
     expect(claim?.category).toBe("service");
     expect(claim?.evidence_kind).toBe("container_cmd");
-    expect(claim?.entrypoint).toMatchObject({ file: "server.py", line: 2 });
+    expect(claim?.entrypoint).toMatchObject({ file: "server.py", line: 3 });
   });
 
   test("go ListenAndServe is a service and a bare func main is not a filename rule", async () => {
@@ -82,7 +82,7 @@ describe("other ecosystems", () => {
     const root = repo({
       Dockerfile: 'CMD ["python", "server.py"]\n',
       "server.py": "app = FastAPI()\n",
-      "other.py": "app = FastAPI()\n",
+      "other.py": "uvicorn.run(app)\n",
     });
     const resolved = await dockerExtractor(root).resolveDeclaration(
       unit(".", ["Dockerfile"], ["docker"]),

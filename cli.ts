@@ -54,7 +54,7 @@ function ghGitEnv(): NodeJS.ProcessEnv {
   };
 }
 
-async function checkout(link: GitLink): Promise<string> {
+export async function checkout(link: GitLink): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), 'surface-lab-'));
   const remote = `https://github.com/${link.owner}/${link.repo}.git`;
   const ref = link.pr !== undefined ? `pull/${link.pr}/head` : 'HEAD';

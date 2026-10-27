@@ -1,19 +1,17 @@
 import { join } from "node:path";
 import type { Unit } from "../types";
 import { repoRelative, unitDir, type Extractor, type ManifestFacts, type Resolution } from "./contract";
-import { cite, readText, type Idiom } from "./scan";
+import { frameworkLine, isFrameworkCommand } from "../../../opensandbox/constructs";
+import { lineIsReachable } from "../reach";
+import { citeAll, readText, type Idiom } from "./scan";
 
 const IDIOMS: Idiom[] = [
   { grep: /\.listen\s*\(/, construct: "listener" },
   { grep: /\bserve\s*\(/, construct: "listener" },
   { grep: /\bcreateServer\s*\(/, construct: "listener" },
-  { grep: /\bnew\s+Hono\s*\(/, construct: "listener", evidence_kind: "framework_ctor" },
   { grep: /\bhttp\.createServer\s*\(/, construct: "listener" },
   { grep: /\bapp\.listen\s*\(/, construct: "listener" },
-  {
-    grep: /\bexport\s+(?:async\s+)?function\s+(?:GET|POST|PUT|PATCH|DELETE|HEAD)\b/,
-    construct: "route_handler",
-  },
+  { grep: /\bBun\.serve\s*\(/, construct: "listener" },
 ];
 
 const TOOLING = /^(?:vitest|jest|eslint|prettier|tsc|biome|playwright|next\s+build|next\s+lint)\b/;
@@ -91,12 +89,22 @@ export function nodeExtractor(repoRoot: string): Extractor {
     async resolveDeclaration(unit: Unit, decl: string): Promise<Resolution> {
       const command = decl.includes(": ") ? decl.split(": ").slice(1).join(": ") : decl;
       if (TOOLING.test(command.trim())) return { unresolved: `tooling: ${command.trim()}` };
+      if (isFrameworkCommand(command)) {
+        const manifest = join(unitDir(repoRoot, unit), "package.json");
+        const manifestText = await readText(manifest);
+        const hit = manifestText ? frameworkLine(manifestText) : null;
+        if (!hit) return { unresolved: "framework start has no line" };
+        return { file: repoRelative(repoRoot, manifest), line: hit.line };
+      }
       const token = fileToken(command);
       if (!token) return { unresolved: "declaration names no source file" };
       const abs = join(unitDir(repoRoot, unit), token);
       const text = await readText(abs);
       if (text === null) return { unresolved: `missing ${token}` };
-      const hit = cite(text, IDIOMS);
+      const rel = repoRelative(repoRoot, abs);
+      const hit = citeAll(text, IDIOMS).find(
+        (item) => item.construct === "listener" && lineIsReachable(text, item.line, rel)
+      );
       if (!hit) return { unresolved: `${token} has no execution construct` };
       return { file: repoRelative(repoRoot, abs), line: hit.line };
     },

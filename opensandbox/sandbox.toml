@@ -1,0 +1,7 @@
+# Workload OpenSandbox starts. The entrypoint is the surface-detection skill.
+# It reads the repo at /work and writes the report to the second argument.
+
+image = "fireweave-surface-skill"
+timeout = "30m"
+workdir = "/work"
+entrypoint = ["bun", "/opt/surface/opensandbox/run.ts", "/work"]

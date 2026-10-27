@@ -1,7 +1,9 @@
 import { join } from "node:path";
 import { extractorsFor } from "./extractors";
 import { listFiles } from "./files";
-import { cite, readText, type Hit } from "./extractors/scan";
+import { citeAll, readText, type Hit } from "./extractors/scan";
+import { citedLineMatches } from "../../opensandbox/constructs";
+import { isCitationFile, isExportOnly, lineIsReachable } from "./reach";
 import type { Category, Claim, Unit } from "./types";
 
 const RANK: Record<string, number> = {
@@ -92,10 +94,10 @@ export async function investigateUnit(
     }
     const cited =
       "line" in resolution
-        ? cite(text, tool.executionIdioms())
+        ? acceptHit(resolution.file, text, citeAll(text, tool.executionIdioms()), resolution.line)
         : tools
             .map((candidate) => {
-              const hit = cite(text, candidate.executionIdioms());
+              const hit = acceptHit(resolution.file, text, citeAll(text, candidate.executionIdioms()));
               return hit ? { hit, ecosystem: candidate.ecosystem } : null;
             })
             .filter((item): item is { hit: Hit; ecosystem: string } => item !== null)
@@ -121,11 +123,12 @@ export async function investigateUnit(
       if (/(?:^|\/)(Dockerfile|Procfile|package\.json|pyproject\.toml|go\.mod|Cargo\.toml)$/.test(file)) {
         continue;
       }
+      if (!isCitationFile(file)) continue;
       const abs = join(repoRoot, file);
       const text = await readText(abs);
       if (text === null) continue;
       for (const tool of tools) {
-        const hit = cite(text, tool.executionIdioms());
+        const hit = acceptHit(file, text, citeAll(text, tool.executionIdioms()));
         if (!hit) continue;
         const idiom = tool.executionIdioms().find((item) => item.construct === hit.construct);
         if (idiom) searched.greps.push(idiom.grep.source);
@@ -185,6 +188,29 @@ export async function investigateUnit(
     confidence: runs && best?.fromDeclaration ? "high" : runs ? "medium" : category === "ambiguous" ? "low" : "medium",
   };
   return claim;
+}
+
+function acceptHit(file: string, text: string, hits: readonly Hit[], requiredLine?: number): Hit | null {
+  for (const hit of hits) {
+    if (requiredLine !== undefined && hit.line !== requiredLine) continue;
+    if (hit.construct === "route_handler" || hit.evidence_kind === "framework_ctor") continue;
+    if (!isCitationFile(file) || !lineIsReachable(text, hit.line, file)) continue;
+    const line = text.split(/\r?\n/)[hit.line - 1] ?? "";
+    if (hit.construct === "listener" && isExportOnly(line) && !citedLineMatches(text, hit.line, "service", false)) {
+      continue;
+    }
+    return hit;
+  }
+  if (requiredLine !== undefined && citedLineMatches(text, requiredLine, "service", true)) {
+    const line = text.split(/\r?\n/)[requiredLine - 1] ?? "";
+    return {
+      line: requiredLine,
+      snippet: line.trim().slice(0, 180),
+      construct: "listener",
+      evidence_kind: "implicit_construct",
+    };
+  }
+  return null;
 }
 
 function classify(

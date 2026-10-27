@@ -48,7 +48,7 @@ describe("verify", () => {
         claim: "runs",
         category: "service",
         evidence_kind: "resolved_declaration",
-        entrypoint: { file: "apps/api/src/server.ts", line: 2, snippet: "const app = new Hono();" },
+        entrypoint: { file: "apps/api/src/server.ts", line: 3, snippet: "serve({ fetch: app.fetch });" },
         searched: {
           globs: [],
           greps: ["resolve:dev: tsx src/server.ts"],
@@ -60,7 +60,7 @@ describe("verify", () => {
     expect(result.downgraded_to).toBeUndefined();
   });
 
-  test("a resolved declaration whose line was not recomputed is rejected", async () => {
+  test("a constructor is not a service, even on the line above serve()", async () => {
     const root = repo({
       "apps/api/package.json": JSON.stringify({ scripts: { dev: "tsx src/server.ts" } }),
       "apps/api/src/server.ts": server,
@@ -71,12 +71,12 @@ describe("verify", () => {
         claim: "runs",
         category: "service",
         evidence_kind: "resolved_declaration",
-        entrypoint: { file: "apps/api/src/server.ts", line: 3, snippet: "serve({ fetch: app.fetch });" },
+        entrypoint: { file: "apps/api/src/server.ts", line: 2, snippet: "const app = new Hono();" },
       })
     );
     expect(result.verified).toBe(false);
     expect(result.downgraded_to).toBe("uncertain");
-    expect(result.rejection_reason).toContain("does not resolve");
+    expect(result.rejection_reason).toContain("not a service");
   });
 
   test("a cited line with no execution construct is rejected", async () => {
@@ -93,7 +93,7 @@ describe("verify", () => {
       })
     );
     expect(result.verified).toBe(false);
-    expect(result.rejection_reason).toContain("does not match");
+    expect(result.rejection_reason).toContain("not a service");
   });
 
   test("a missing file is rejected", async () => {
@@ -188,12 +188,75 @@ describe("verify", () => {
         claim: "runs",
         category: "service",
         evidence_kind: "implicit_construct",
-        entrypoint: { file: "apps/api/src/server.ts", line: 2, snippet: "const app = new Hono();" },
+        entrypoint: { file: "apps/api/src/server.ts", line: 3, snippet: "serve({ fetch: app.fetch });" },
         counter_hypothesis: "this file is only a test",
         counter_checked: "this file is only a test",
       })
     );
     expect(result.verified).toBe(false);
     expect(result.rejection_reason).toContain("counter-check");
+  });
+
+  test("a middleware export claimed as a service is rejected", async () => {
+    const root = repo({
+      "src/middleware/cors/index.ts":
+        "export const cors = () => async (c, next) => {\n  await next();\n};\n",
+    });
+    const result = await verify(
+      root,
+      claim({
+        unit: "src/middleware/cors",
+        claim: "runs",
+        category: "service",
+        evidence_kind: "implicit_construct",
+        entrypoint: {
+          file: "src/middleware/cors/index.ts",
+          line: 1,
+          snippet: "export const cors = () => async (c, next) => {",
+        },
+        counter_checked: "opened src/middleware/cors/index.ts at line 1",
+      })
+    );
+    expect(result.verified).toBe(false);
+    expect(result.downgraded_to).toBe("uncertain");
+    expect(result.claim).toBe("runs");
+  });
+
+  test("a runs claim that cites a README is rejected", async () => {
+    const root = repo({ "README.md": "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\nnew Hono()\n" });
+    const result = await verify(
+      root,
+      claim({
+        unit: ".",
+        claim: "runs",
+        category: "service",
+        evidence_kind: "implicit_construct",
+        entrypoint: { file: "README.md", line: 27, snippet: "new Hono()" },
+        counter_checked: "opened README.md at line 27",
+      })
+    );
+    expect(result.verified).toBe(false);
+    expect(result.downgraded_to).toBe("uncertain");
+    expect(result.rejection_reason).toContain("not source");
+  });
+
+  test("listen() inside a function nobody calls is rejected", async () => {
+    const root = repo({
+      "src/server.ts": "export function start() {\n  app.listen(3000);\n}\n",
+    });
+    const result = await verify(
+      root,
+      claim({
+        unit: ".",
+        claim: "runs",
+        category: "service",
+        evidence_kind: "implicit_construct",
+        entrypoint: { file: "src/server.ts", line: 2, snippet: "app.listen(3000);" },
+        counter_checked: "opened src/server.ts at line 2",
+      })
+    );
+    expect(result.verified).toBe(false);
+    expect(result.downgraded_to).toBe("uncertain");
+    expect(result.rejection_reason).toContain("not reachable");
   });
 });

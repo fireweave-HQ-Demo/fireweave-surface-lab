@@ -1,7 +1,9 @@
 import { join } from "node:path";
 import type { Claim, Unit, VerifiedClaim } from "./types";
+import { citedLineMatches } from "../../opensandbox/constructs";
 import { ecosystemsForFiles, extractor } from "./extractors";
-import { matchesNear, readText } from "./extractors/scan";
+import { readText } from "./extractors/scan";
+import { isCitationFile, isExportOnly, lineIsReachable } from "./reach";
 
 const MANIFEST = /(?:^|\/)(package\.json|pyproject\.toml|Dockerfile|Procfile|go\.mod|Cargo\.toml|index\.html)$/;
 
@@ -73,13 +75,28 @@ export async function verify(repoRoot: string, claim: Claim): Promise<VerifiedCl
     if (claim.entrypoint.line < 1 || claim.entrypoint.line > lines.length) {
       return reject(claim, `line ${claim.entrypoint.line} is outside ${claim.entrypoint.file}`);
     }
+    if (!isCitationFile(claim.entrypoint.file)) {
+      return reject(claim, "citation is not source code");
+    }
+    const manifest = /(?:^|\/)(package\.json|pyproject\.toml|Dockerfile|Procfile)$/.test(claim.entrypoint.file);
+    const line = lines[claim.entrypoint.line - 1] ?? "";
+    if (
+      claim.category === "service" &&
+      isExportOnly(line) &&
+      !citedLineMatches(text, claim.entrypoint.line, "service", manifest)
+    ) {
+      return reject(claim, "an export is not a service");
+    }
+    if (!citedLineMatches(text, claim.entrypoint.line, claim.category, manifest)) {
+      return reject(claim, `line ${claim.entrypoint.line} is not a ${claim.category} construct`);
+    }
+    if (!lineIsReachable(text, claim.entrypoint.line, claim.entrypoint.file)) {
+      return reject(claim, "cited construct is not reachable");
+    }
     const ecosystem =
       claim.ecosystem ?? ecosystemsForFiles([claim.entrypoint.file])[0] ?? null;
     const tool = ecosystem ? extractor(ecosystem, repoRoot) : null;
-    if (!tool) return reject(claim, "no extractor for the cited file");
-    if (!matchesNear(text, claim.entrypoint.line, tool.executionIdioms())) {
-      return reject(claim, "cited line does not match an execution construct");
-    }
+    if (!tool && !manifest) return reject(claim, "no extractor for the cited file");
     if (claim.evidence_kind === "container_cmd") {
       const docker = extractor("docker", repoRoot);
       if (!docker) return reject(claim, "no docker extractor");
@@ -93,6 +110,7 @@ export async function verify(repoRoot: string, claim: Claim): Promise<VerifiedCl
       if (!matched) return reject(claim, "container command does not name the cited file");
     }
     if (claim.evidence_kind === "resolved_declaration") {
+      if (!tool) return reject(claim, "no extractor for the cited file");
       const facts = await tool.readManifest(unitFor(claim));
       const declarations = [...facts.scripts, ...facts.bins];
       const resolutions = await Promise.all(

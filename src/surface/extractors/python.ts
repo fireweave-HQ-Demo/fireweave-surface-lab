@@ -6,8 +6,6 @@ import { cite, readText, type Idiom } from "./scan";
 const IDIOMS: Idiom[] = [
   { grep: /\buvicorn\.run\s*\(/, construct: "listener" },
   { grep: /\bapp\.run\s*\(/, construct: "listener" },
-  { grep: /\bFastAPI\s*\(/, construct: "listener", evidence_kind: "framework_ctor" },
-  { grep: /\bFlask\s*\(/, construct: "listener", evidence_kind: "framework_ctor" },
   { grep: /\.serve_forever\s*\(/, construct: "listener" },
   { grep: /\bThreadingHTTPServer\s*\(/, construct: "listener" },
   { grep: /\bHTTPServer\s*\(/, construct: "listener" },

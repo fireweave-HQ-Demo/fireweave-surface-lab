@@ -33,29 +33,46 @@ export type Hit = {
   evidence_kind: NonNullable<Idiom["evidence_kind"]>;
 };
 
-/** Earliest line of the strongest construct. Line numbers are 1-based. */
-export function cite(text: string, idioms: readonly Idiom[]): Hit | null {
+function isComment(line: string): boolean {
+  const trimmed = line.trim();
+  return trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("*") || trimmed.startsWith("#");
+}
+
+/** Every matching line, strongest construct first, then earliest line. Comments are not matches. */
+export function citeAll(text: string, idioms: readonly Idiom[]): Hit[] {
   const lines = text.split(/\r?\n/);
-  let best: Hit | null = null;
-  let bestRank = -1;
+  const hits: Hit[] = [];
+  let block = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
+    if (block) {
+      if (line.includes("*/")) block = false;
+      continue;
+    }
+    if (line.includes("/*") && !line.includes("*/")) {
+      block = true;
+      continue;
+    }
+    if (isComment(line)) continue;
     for (const idiom of idioms) {
       idiom.grep.lastIndex = 0;
       if (!idiom.grep.test(line)) continue;
-      const rank = RANK[idiom.construct] ?? 0;
-      if (rank > bestRank) {
-        bestRank = rank;
-        best = {
-          line: i + 1,
-          snippet: line.trim().slice(0, 180),
-          construct: idiom.construct,
-          evidence_kind: idiom.evidence_kind ?? "implicit_construct",
-        };
-      }
+      hits.push({
+        line: i + 1,
+        snippet: line.trim().slice(0, 180),
+        construct: idiom.construct,
+        evidence_kind: idiom.evidence_kind ?? "implicit_construct",
+      });
     }
   }
-  return best;
+  return hits.sort(
+    (a, b) => (RANK[b.construct] ?? 0) - (RANK[a.construct] ?? 0) || a.line - b.line
+  );
+}
+
+/** Earliest line of the strongest construct. Line numbers are 1-based. */
+export function cite(text: string, idioms: readonly Idiom[]): Hit | null {
+  return citeAll(text, idioms)[0] ?? null;
 }
 
 export function matchesNear(text: string, line: number, idioms: readonly Idiom[]): boolean {

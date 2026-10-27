@@ -125,8 +125,10 @@ describe("filter cases", () => {
     expectRun("apps/api", "service", "apps/api/src/server.ts");
     expect(row("apps/api")?.agent.evidence_kind).toBe("resolved_declaration");
     expect(JSON.stringify(row("apps/api")?.agent)).not.toContain("SENTINEL");
-    expectRun("apps/console", "service", "apps/console/app/api/route.ts");
-    expectRun("apps/marketing", "static-web", "apps/marketing/next.config.ts");
+    expectRun("apps/console", "service", "apps/console/package.json");
+    expect(row("apps/console")?.agent.entrypoint?.snippet).toContain("next start");
+    expectRun("apps/marketing", "service", "apps/marketing/package.json");
+    expect(row("apps/marketing")?.agent.entrypoint?.snippet).toContain("next start");
     expectRun("apps/agent-worker", "worker", "apps/agent-worker/worker.py");
     // serve_forever binds and blocks, so the invariant is service, not worker.
     expectRun("apps/browser-runner", "service", "apps/browser-runner/server.py");

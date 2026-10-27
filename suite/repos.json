@@ -1,0 +1,141 @@
+{
+  "runOrder": ["hono", "supabase", "realworld", "awesome-compose", "nvm", "fireweave-test-repo"],
+  "repos": [
+    {
+      "id": "hono",
+      "tier": 1,
+      "name": "Hono",
+      "url": "https://github.com/honojs/hono",
+      "languages": ["typescript"],
+      "probes": "serve() on a real server, and a library that must not be promoted",
+      "note": "pnpm workspace of published packages. Middleware and adapters export handlers. A clean run selects nothing."
+    },
+    {
+      "id": "fastapi",
+      "tier": 1,
+      "name": "FastAPI",
+      "url": "https://github.com/tiangolo/fastapi",
+      "languages": ["python"],
+      "probes": "docs_src examples mistaken for surfaces",
+      "note": "The package is a library. docs_src/ holds dozens of tiny example apps."
+    },
+    {
+      "id": "turborepo",
+      "tier": 2,
+      "name": "Turborepo",
+      "url": "https://github.com/vercel/turborepo",
+      "languages": ["typescript", "rust"],
+      "probes": "apps/ plus packages/, and a Rust workspace beside them",
+      "note": "Root has apps/, packages/, crates/, and examples/."
+    },
+    {
+      "id": "nextjs",
+      "tier": 2,
+      "name": "Next.js",
+      "url": "https://github.com/vercel/next.js",
+      "languages": ["typescript"],
+      "probes": "framework start line, and examples/ that are real Next apps",
+      "note": "examples/ is many separate apps. next start is the listener, not next.config."
+    },
+    {
+      "id": "supabase",
+      "tier": 2,
+      "name": "Supabase",
+      "url": "https://github.com/supabase/supabase",
+      "languages": ["typescript", "go", "rust", "python"],
+      "probes": "several languages under one apps/ tree",
+      "note": "Large. Run after Hono."
+    },
+    {
+      "id": "flask",
+      "tier": 3,
+      "name": "Flask",
+      "url": "https://github.com/pallets/flask",
+      "languages": ["python"],
+      "probes": "library versus examples that call app.run()",
+      "note": "examples/ contains tutorial, javascript, and celery."
+    },
+    {
+      "id": "uvicorn",
+      "tier": 3,
+      "name": "Uvicorn",
+      "url": "https://github.com/encode/uvicorn",
+      "languages": ["python"],
+      "probes": "one file that is both a CLI entry and an importable server",
+      "note": "uvicorn/main.py and uvicorn/__main__.py both exist."
+    },
+    {
+      "id": "realworld",
+      "tier": 3,
+      "name": "RealWorld",
+      "url": "https://github.com/gothinkster/realworld",
+      "languages": [],
+      "probes": "construct table across languages",
+      "note": "This tree is specs, docs, and a Makefile. The language implementations are not in this repository. A clean run does not invent a surface from the README."
+    },
+    {
+      "id": "awesome-compose",
+      "tier": 4,
+      "name": "Awesome Compose",
+      "url": "https://github.com/docker/awesome-compose",
+      "languages": ["docker"],
+      "probes": "compose stacks with no top-level manifest, and honest uncertain",
+      "note": "Each folder is its own stack. The compose file is a lead, not the citation."
+    },
+    {
+      "id": "vscode",
+      "tier": 4,
+      "name": "VS Code",
+      "url": "https://github.com/microsoft/vscode",
+      "languages": ["typescript"],
+      "probes": "scale and determinism",
+      "note": "Hundreds of packages. Pick this on purpose. It is not in the short run order."
+    },
+    {
+      "id": "pages-themes",
+      "tier": 4,
+      "name": "GitHub Pages themes",
+      "url": "https://github.com/pages-themes",
+      "languages": [],
+      "runnable": false,
+      "probes": "static site versus a lone HTML file",
+      "note": "This URL is an organization, not a repository. The runnable case is pages-theme-minimal."
+    },
+    {
+      "id": "pages-theme-minimal",
+      "tier": 4,
+      "name": "GitHub Pages minimal theme",
+      "url": "https://github.com/pages-themes/minimal",
+      "languages": ["ruby"],
+      "probes": "Jekyll theme: _config.yml and index.md, not a lone index.html",
+      "note": "Has a Gemfile, _config.yml, _layouts, and index.md."
+    },
+    {
+      "id": "nvm",
+      "tier": 5,
+      "name": "nvm",
+      "url": "https://github.com/nvm-sh/nvm",
+      "languages": ["shell"],
+      "probes": "empty case: a shell tool with no server",
+      "note": "Correct answer is no surface."
+    },
+    {
+      "id": "awesome",
+      "tier": 5,
+      "name": "awesome",
+      "url": "https://github.com/sindresorhus/awesome",
+      "languages": [],
+      "probes": "README-only does_not_run with a populated search",
+      "note": "No program. A README line must not verify."
+    },
+    {
+      "id": "fireweave-test-repo",
+      "tier": 5,
+      "name": "FireWeave test repo",
+      "url": "https://github.com/fireweave-HQ-Demo/fireweave-test-repo",
+      "languages": ["typescript", "python"],
+      "probes": "known clinic answer",
+      "note": "sandbox-ehr and sandbox-payer are agent-only review with a server.py citation. voice-worker is does_not_run with a populated search."
+    }
+  ]
+}
