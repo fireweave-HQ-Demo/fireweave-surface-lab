@@ -170,4 +170,18 @@ describe("filter cases", () => {
     expect(result.mode).toBe("shadow");
     expect(result.promotion).toBeNull();
   });
+
+  test("promote keeps verified agreement and sends an agent-only unit to review", async () => {
+    const result = await runSurfacePipeline(clinic(), scanner, { mode: "promote" });
+    expect(result.promotion?.selected).toEqual([
+      "apps/api",
+      "apps/console",
+      "apps/marketing",
+      "apps/agent-worker",
+      "apps/browser-runner",
+    ]);
+    expect(result.promotion?.review).toContain("apps/sandbox");
+    expect(result.promotion?.selected).not.toContain("apps/sandbox");
+    expect(result.promotion?.selected).not.toContain("apps/voice-worker");
+  });
 });

@@ -146,8 +146,24 @@ async function main(): Promise<void> {
     const found = await detectSurfaces({ cwd: dir });
     const { surfaces, held } = partitionSurfaces(found.surfaces);
     const scanner: ScannerRow[] = found.surfaces.map(toScannerRow);
-    const selected = new Set(surfaces.map((s) => s.path));
-    const agent = await confirmAgentApps(dir, surfaces.map(toScannerRow));
+    const filterSelected = new Set(surfaces.map((s) => s.path));
+    const shadow = await runSurfacePipeline(
+      dir,
+      found.surfaces.map((zone) => ({
+        path: zone.path,
+        verdict: zone.verdict,
+        kind: zone.kind,
+        selected: filterSelected.has(zone.path),
+      }))
+    ).catch((error: unknown) => {
+      console.error(
+        `agent diff failed: ${error instanceof Error ? error.message : 'investigation failed'}`
+      );
+      return null;
+    });
+    const promote = shadow?.mode === 'promote' ? shadow.promotion : null;
+    const selected = promote ? new Set(promote.selected) : filterSelected;
+    const agent = await confirmAgentApps(dir, surfaces.filter((zone) => selected.has(zone.path)).map(toScannerRow));
     const apps = 'apps' in agent ? agent.apps : null;
     for (const stray of strayAgentPurposes(apps, selected)) {
       console.warn(
@@ -159,13 +175,15 @@ async function main(): Promise<void> {
     const note = 'apps' in agent ? null : 'skipped' in agent ? agent.skipped : agent.failed;
     const agentLine = lane === 'ok' ? 'agent ok' : `agent ${lane}: ${note}`;
     console.log(
-      `${rows.length} surfaces from ${found.zonesExamined} zones. ${held.length} not selected. ${agentLine}.`
+      promote
+        ? `${rows.length} surfaces from ${found.zonesExamined} zones. ${promote.review.length} in review. ${agentLine}.`
+        : `${rows.length} surfaces from ${found.zonesExamined} zones. ${held.length} not selected. ${agentLine}.`
     );
     if (found.unreadable.length > 0) {
       for (const zone of found.unreadable) console.log(`unreadable ${zone.path}: ${zone.reason}`);
     }
     if (rows.length > 0) console.log(`\n${formatRows(rows)}`);
-    if (held.length > 0) {
+    if (!promote && held.length > 0) {
       console.log(
         `\nNot selected\n${formatTable(
           ['Path', 'Stack', 'Verdict', 'Kind', 'Reason'],
@@ -179,17 +197,11 @@ async function main(): Promise<void> {
         )}`
       );
     }
-    try {
-      const shadow = await runSurfacePipeline(
-        dir,
-        found.surfaces.map((zone) => ({
-          path: zone.path,
-          verdict: zone.verdict,
-          kind: zone.kind,
-          selected: selected.has(zone.path),
-        }))
-      );
-      console.log(`\nAgent diff (shadow)\n${formatDiff(shadow.diffs)}`);
+    if (promote && promote.review.length > 0) {
+      console.log(`\nReview\n${promote.review.join('\n')}`);
+    }
+    if (shadow) {
+      console.log(`\nAgent diff (${shadow.mode})\n${formatDiff(shadow.diffs)}`);
       if (shadow.conventions.length > 0) {
         console.log('\nConventions');
         for (const convention of shadow.conventions) {
@@ -207,10 +219,6 @@ async function main(): Promise<void> {
       for (const item of shadow.excluded) {
         console.log(`${item.path}  ${item.reason}${item.review ? '  review' : ''}`);
       }
-    } catch (error) {
-      console.error(
-        `agent diff failed: ${error instanceof Error ? error.message : 'investigation failed'}`
-      );
     }
   } finally {
     await rm(dir, { recursive: true, force: true });
