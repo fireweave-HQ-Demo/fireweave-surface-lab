@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { mergeRows, type AgentApp, type ScannerRow } from './merge';
+import { mergeRows, strayAgentPurposes, type AgentApp, type ScannerRow } from './merge';
 
 const confirmed: ScannerRow = {
   path: 'apps/console',
@@ -38,6 +38,7 @@ describe('mergeRows', () => {
         path: 'apps/console',
         stack: 'web',
         confidence: 'high',
+        evidence: 'confirmed',
         purpose: null,
         reasoning: null,
         source: 'scanner',
@@ -74,5 +75,23 @@ describe('mergeRows', () => {
       new Set(['apps/console'])
     );
     expect(rows.map((r) => r.path)).toEqual(['apps/console']);
+  });
+
+  test('a purpose for a path the filter dropped is reported, not merged', () => {
+    expect(strayAgentPurposes([purpose('packages/db')], new Set(['apps/console']))).toEqual([
+      { path: 'packages/db', purpose: 'HTTP API' },
+    ]);
+  });
+
+  test('an entrypoint does not promote a probable verdict', () => {
+    const row = mergeRows(
+      [{ ...probable, entrypointSource: 'src/server.ts' }],
+      null,
+      new Set(['apps/api'])
+    )[0];
+    expect(row).toMatchObject({
+      confidence: 'medium',
+      evidence: 'probable + entrypoint(src/server.ts)',
+    });
   });
 });

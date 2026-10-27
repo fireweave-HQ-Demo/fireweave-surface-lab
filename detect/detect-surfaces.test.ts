@@ -53,7 +53,6 @@ describe('detectSurfaces — verdicts are named, and each name means something',
     expect(z?.surface).toBe('ts-server');
     expect(z?.verdict).toBe('confirmed');
     expect(z?.kind).toBe('app');
-    expect(z?.preselect).toBe(true);
   });
 
   test('probable: the surface is inferred from ABSENCE, so it is never confirmed', async () => {
@@ -111,8 +110,6 @@ describe('detectSurfaces — verdicts are named, and each name means something',
       'ts-server',
       'web',
     ]);
-    // The whole point: an ambiguous row must NOT be pre-ticked.
-    expect(z?.preselect).toBe(false);
   });
 
   test('undecidable is REPORTED, not dropped', async () => {
@@ -129,7 +126,6 @@ describe('detectSurfaces — verdicts are named, and each name means something',
     expect(z).toBeDefined();
     expect(z?.verdict).toBe('undecidable');
     expect(z?.surface).toBeNull();
-    expect(z?.preselect).toBe(false);
   });
 });
 
@@ -154,13 +150,10 @@ describe('detectSurfaces — app vs library is a GRAPH question', () => {
     'packages/core/index.ts': 'export const c = 1;\n',
   });
 
-  test('a depended-upon zone with no entrypoint is a library, and is NOT pre-selected', async () => {
+  test('a depended-upon zone with no entrypoint is a library', async () => {
     const r = await detectSurfaces({ cwd: repo(workspace()) });
     const core = at(r, 'packages/core');
     expect(core?.kind).toBe('library');
-    // A library may really be deployed — the user knows, the detector does not.
-    // So it stays visible and selectable, but never pre-ticked.
-    expect(core?.preselect).toBe(false);
     expect(core?.surface).toBe('ts-server');
   });
 
@@ -168,7 +161,6 @@ describe('detectSurfaces — app vs library is a GRAPH question', () => {
     const r = await detectSurfaces({ cwd: repo(workspace()) });
     const api = at(r, 'packages/api');
     expect(api?.kind).toBe('app');
-    expect(api?.preselect).toBe(true);
   });
 
   test('directory NAME is not the signal — a deployed `packages/*` zone is still an app', async () => {
@@ -270,7 +262,6 @@ describe('diffDeclaredSurfaces — a re-run FLAGS, it does not retire', () => {
       verdict: 'confirmed',
       kind: 'app',
       evidence: [],
-      preselect: true,
     }) as never;
 
   test('a declared surface detection no longer sees is vanished + needsReview', async () => {
@@ -446,7 +437,6 @@ describe('detectSurfaces — Go: every package main, handlers, distributed binar
     expect(z).toMatchObject({
       startProfile: 'server',
       clientShipped: false,
-      preselect: true,
     });
   });
 
@@ -487,7 +477,7 @@ describe('detectSurfaces — Go: every package main, handlers, distributed binar
     expect(z?.clientShipped).toBe(false);
   });
 
-  test('a wails desktop app is client-shipped and never pre-selected (Go has no client profile)', async () => {
+  test('a wails desktop app is client-shipped (Go has no client profile)', async () => {
     const root = repo({
       'go.mod':
         'module example.com/desk\n\nrequire github.com/wailsapp/wails/v2 v2.9.0\n',
@@ -497,7 +487,6 @@ describe('detectSurfaces — Go: every package main, handlers, distributed binar
     expect(z).toMatchObject({
       clientShipped: true,
       startProfile: 'client',
-      preselect: false,
     });
     expect(
       z?.evidence.some((e) => e.kind === 'distribution.client-shipped')
@@ -535,11 +524,10 @@ describe('detectSurfaces — Java: deep layouts, modules, aggregators, Android',
     expect(z).toMatchObject({
       startProfile: 'server',
       clientShipped: false,
-      preselect: true,
     });
   });
 
-  test('an aggregator POM is never pre-selected; its deployable module is', async () => {
+  test('an aggregator POM is marked as an aggregator', async () => {
     const root = repo({
       'pom.xml':
         '<project><packaging>pom</packaging><modules><module>api</module></modules></project>\n',
@@ -548,11 +536,9 @@ describe('detectSurfaces — Java: deep layouts, modules, aggregators, Android',
     });
     const r = await detectSurfaces({ cwd: root });
     const agg = at(r, '.');
-    expect(agg?.preselect).toBe(false);
     expect(
       agg?.evidence.some((e) => e.kind === 'deployability.aggregator')
     ).toBe(true);
-    expect(at(r, 'api')?.preselect).toBe(true);
   });
 
   test('an Android module is refused: client-shipped, no Java client profile', async () => {
@@ -566,7 +552,6 @@ describe('detectSurfaces — Java: deep layouts, modules, aggregators, Android',
     expect(z).toMatchObject({
       clientShipped: true,
       startProfile: 'client',
-      preselect: false,
     });
     expect(z?.refusal).toContain('Android');
   });
@@ -588,23 +573,21 @@ describe('detectSurfaces — Rust: every binary, workspaces, Tauri and Leptos', 
     expect(z).toMatchObject({ startProfile: 'server', clientShipped: false });
   });
 
-  test('a virtual workspace root is not pre-selected; its members are', async () => {
+  test('a virtual workspace root is marked as a cargo workspace', async () => {
     const root = repo({
       'Cargo.toml': '[workspace]\nmembers = ["crates/api"]\n',
       'crates/api/Cargo.toml': '[package]\nname = "api"\n',
       'crates/api/src/main.rs': 'fn main() {}\n',
     });
     const r = await detectSurfaces({ cwd: root });
-    expect(at(r, '.')?.preselect).toBe(false);
     expect(
       at(r, '.')?.evidence.some(
         (e) => e.kind === 'deployability.cargo-workspace'
       )
     ).toBe(true);
-    expect(at(r, 'crates/api')?.preselect).toBe(true);
   });
 
-  test('a Tauri src-tauri crate is client-shipped and never pre-selected', async () => {
+  test('a Tauri src-tauri crate is client-shipped', async () => {
     const root = repo({
       'desktop/src-tauri/Cargo.toml':
         '[package]\nname = "app"\n\n[dependencies]\ntauri = "2"\n',
@@ -614,7 +597,6 @@ describe('detectSurfaces — Rust: every binary, workspaces, Tauri and Leptos', 
     expect(z).toMatchObject({
       clientShipped: true,
       startProfile: 'client',
-      preselect: false,
     });
   });
 
@@ -664,7 +646,6 @@ describe('detectSurfaces — Dart and Swift: app vs server picks the start profi
       startProfile: 'client',
       clientShipped: true,
       entrypoint: 'lib/main.dart',
-      preselect: true,
     });
     expect(at(r, 'ios')).toBeUndefined();
   });

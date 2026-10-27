@@ -43,18 +43,14 @@ import { join } from 'node:path';
 import type { HarnessSurfaceName, StartProfile } from './types';
 import { discoverZones, type UnreadableZone, type Zone } from './topology';
 import {
-  CLIENT_PROFILE_SURFACES,
   analyzeLanguage,
   findXcodeZoneDirs,
   xcodeProjectsIn,
   type DetectedEntrypoint,
   type LanguageAnalysis,
 } from './language-entrypoints';
-import {
-  isPreselectable,
-  type SurfaceEvidence,
-  type SurfaceVerdict,
-} from './verdict';
+import { type SurfaceEvidence, type SurfaceVerdict } from './verdict';
+import { detectEntrypointSource, isWorkspaceRoot } from '../select';
 
 export type ZoneKind = 'app' | 'library' | 'unknown';
 
@@ -70,8 +66,13 @@ export interface DetectedSurface {
   /** Suggested entrypoint file, when one was found. */
   readonly entrypoint?: string;
   readonly evidence: readonly SurfaceEvidence[];
-  /** True when a caller may pre-tick this row in a confirmation prompt. */
-  readonly preselect: boolean;
+  /**
+   * Start file found after the verdict. The surface filter reads this.
+   * It is not language evidence and does not change `kind` or `verdict`.
+   */
+  readonly entrypointSource?: string;
+  /** True only for `.` when the repo is a workspace aggregator. */
+  readonly workspaceRoot?: boolean;
   /**
    * The start profile to suggest for this surface: `client` for code that
    * ships to end users (browser, Flutter, Apple app), `server` otherwise.
@@ -306,8 +307,8 @@ async function entrypointEvidence(
       const s = scripts as Record<string, unknown>;
       // `dev` is deliberately NOT here. Libraries routinely carry a `dev`
       // script (watch builds, storybook), so counting it as deployability
-      // evidence classifies component libraries as apps — which then pre-ticks
-      // them for instrumentation nobody asked for.
+      // evidence classifies component libraries as apps, and a positive
+      // language read then marks them `confirmed`.
       for (const key of ['start', 'serve']) {
         if (typeof s[key] === 'string') {
           evidence.push({
@@ -504,7 +505,7 @@ function decideVerdict(
   if (names.length > 1) {
     // Ambiguous is a REPORTED state, not a coin flip. The first name is offered
     // as the lead only so the caller has something to render; the caller must
-    // ask, and `preselect` is false for this verdict.
+    // ask. The surface filter holds this row back on the verdict itself.
     return {
       verdict: 'ambiguous',
       surface: names[0]!,
@@ -519,7 +520,7 @@ function decideVerdict(
   // `confirmed` requires POSITIVE language evidence, not merely a deployable
   // zone. Without this, a zero-dependency browser SDK reads as `confirmed
   // ts-server` — and a confidently wrong answer is worse than an uncertain one,
-  // because the selection step pre-ticks it and nobody looks again. Verified
+  // because the surface filter keeps a `confirmed` app and nobody looks again. Verified
   // against a real multi-language SDK repo, where exactly that happened.
   if (kind === 'app' && positivelyEvidenced) {
     return { verdict: 'confirmed', surface: only, alternatives: [] };
@@ -550,6 +551,7 @@ export async function detectSurfaces(
   zones.sort((a, b) => a.path.localeCompare(b.path));
   const inDegree = buildInDegree(zones);
 
+  const workspaceRoot = await isWorkspaceRoot(root);
   const surfaces: DetectedSurface[] = [];
   for (const zone of zones) {
     const abs = zone.path === '.' ? root : join(root, zone.path);
@@ -605,12 +607,6 @@ export async function detectSurfaces(
       surface === null
         ? undefined
         : (analysis?.startProfile ?? (surface === 'web' ? 'client' : 'server'));
-    // Client-shipped code in a language with no client profile cannot be
-    // wired without a server key in the shipped artifact — never pre-tick it.
-    const unwireable =
-      clientShipped &&
-      surface !== null &&
-      !CLIENT_PROFILE_SURFACES.has(surface);
 
     // A zone with no language signal AND no deployability signal is not worth
     // reporting as a surface at all — it is a directory. A zone with EITHER is
@@ -618,6 +614,13 @@ export async function detectSurfaces(
     if (verdict === 'undecidable' && entryEv.length === 0) continue;
 
     const evidence = [...[...nominated.values()].flat(), ...entryEv, ...kindEv];
+    const entrypointSource = await detectEntrypointSource(root, {
+      path: zone.path,
+      surface,
+      kind,
+      verdict,
+      ...(entrypoint !== undefined ? { entrypoint } : {}),
+    });
     surfaces.push({
       path: zone.path,
       surface,
@@ -625,15 +628,9 @@ export async function detectSurfaces(
       verdict,
       kind,
       ...(entrypoint !== undefined ? { entrypoint } : {}),
+      ...(entrypointSource !== null ? { entrypointSource } : {}),
+      ...(zone.path === '.' && workspaceRoot ? { workspaceRoot: true } : {}),
       evidence,
-      // A library is never pre-ticked even on a `confirmed` language read: the
-      // user may know it is deployed, but the detector does not, and silently
-      // instrumenting a library is the more expensive mistake.
-      preselect:
-        isPreselectable(verdict) &&
-        kind !== 'library' &&
-        analysis?.blockPreselect !== true &&
-        !unwireable,
       ...(startProfile !== undefined ? { startProfile } : {}),
       clientShipped,
       ...(analysis && analysis.entrypoints.length > 0

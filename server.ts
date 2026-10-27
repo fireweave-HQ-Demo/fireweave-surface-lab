@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import index from './index.html';
 import { confirmAgentApps } from './agent';
 import { detectSurfaces } from './detect/detect-surfaces';
-import { mergeRows } from './merge';
+import { mergeRows, strayAgentPurposes } from './merge';
 import { partitionSurfaces, toScannerRow } from './select';
 
 const PR =
@@ -53,11 +53,17 @@ Bun.serve({
         try {
           dir = await checkoutPullRequest(body.pr ?? '');
           const found = await detectSurfaces({ cwd: dir });
-          const { surfaces, held } = await partitionSurfaces(dir, found.surfaces);
+          const { surfaces, held } = partitionSurfaces(found.surfaces);
           const scanner = found.surfaces.map(toScannerRow);
           const selected = new Set(surfaces.map((s) => s.path));
           const agent = await confirmAgentApps(dir, surfaces.map(toScannerRow));
-          const rows = mergeRows(scanner, 'apps' in agent ? agent.apps : null, selected);
+          const apps = 'apps' in agent ? agent.apps : null;
+          for (const stray of strayAgentPurposes(apps, selected)) {
+            console.warn(
+              `agent returned a purpose for an unselected path ${stray.path}: ${JSON.stringify(stray.purpose)}`
+            );
+          }
+          const rows = mergeRows(scanner, apps, selected);
           return Response.json({
             pr: body.pr,
             lanes: {

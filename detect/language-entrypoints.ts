@@ -45,8 +45,6 @@ export interface LanguageAnalysis {
   /** The zone's own artifact ships to end users. */
   readonly clientShipped: boolean;
   readonly startProfile: StartProfile;
-  /** Set when the zone must never be pre-selected (aggregators, refusals). */
-  readonly blockPreselect?: boolean;
   /** Set when initialise must not wire this zone at all, and why. */
   readonly refusal?: string;
 }
@@ -325,7 +323,6 @@ async function analyzeRust(
         entrypoints,
         clientShipped: false,
         startProfile: 'server',
-        blockPreselect: true,
       };
     }
   }
@@ -436,7 +433,6 @@ async function analyzeJava(
       entrypoints,
       clientShipped: true,
       startProfile: 'client',
-      blockPreselect: true,
       refusal,
     };
   }
@@ -461,7 +457,6 @@ async function analyzeJava(
       entrypoints,
       clientShipped: false,
       startProfile: 'server',
-      blockPreselect: true,
     };
   }
   if (
@@ -481,7 +476,6 @@ async function analyzeJava(
       entrypoints,
       clientShipped: false,
       startProfile: 'server',
-      blockPreselect: true,
     };
   }
 

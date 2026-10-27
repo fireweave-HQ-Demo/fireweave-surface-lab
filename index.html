@@ -39,6 +39,7 @@
           <th>Path</th>
           <th>Stack</th>
           <th>Confidence</th>
+          <th>Evidence</th>
           <th>Purpose</th>
           <th>Source</th>
         </tr>
@@ -84,7 +85,7 @@
         }
         for (const s of data.rows) {
           const row = document.createElement('tr');
-          for (const value of [s.path, s.stack, s.confidence, s.purpose ?? '—', s.source]) {
+          for (const value of [s.path, s.stack, s.confidence, s.evidence, s.purpose ?? '—', s.source]) {
             const cell = document.createElement('td');
             cell.textContent = value;
             row.append(cell);

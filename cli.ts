@@ -5,7 +5,7 @@ import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { confirmAgentApps } from './agent';
 import { detectSurfaces } from './detect/detect-surfaces';
-import { mergeRows, type ConfirmRow, type ScannerRow } from './merge';
+import { mergeRows, strayAgentPurposes, type ConfirmRow, type ScannerRow } from './merge';
 import { partitionSurfaces, toScannerRow } from './select';
 
 const GITHUB =
@@ -78,8 +78,15 @@ function formatTable(header: readonly string[], body: readonly (readonly string[
 
 function formatRows(rows: readonly ConfirmRow[]): string {
   return formatTable(
-    ['Path', 'Stack', 'Confidence', 'Purpose', 'Source'],
-    rows.map((row) => [row.path, row.stack, row.confidence, row.purpose ?? '—', row.source])
+    ['Path', 'Stack', 'Confidence', 'Evidence', 'Purpose', 'Source'],
+    rows.map((row) => [
+      row.path,
+      row.stack,
+      row.confidence,
+      row.evidence,
+      row.purpose ?? '—',
+      row.source,
+    ])
   );
 }
 
@@ -107,11 +114,17 @@ async function main(): Promise<void> {
   const dir = await checkout(link);
   try {
     const found = await detectSurfaces({ cwd: dir });
-    const { surfaces, held } = await partitionSurfaces(dir, found.surfaces);
+    const { surfaces, held } = partitionSurfaces(found.surfaces);
     const scanner: ScannerRow[] = found.surfaces.map(toScannerRow);
     const selected = new Set(surfaces.map((s) => s.path));
     const agent = await confirmAgentApps(dir, surfaces.map(toScannerRow));
-    const rows = mergeRows(scanner, 'apps' in agent ? agent.apps : null, selected);
+    const apps = 'apps' in agent ? agent.apps : null;
+    for (const stray of strayAgentPurposes(apps, selected)) {
+      console.warn(
+        `agent returned a purpose for an unselected path ${stray.path}: ${JSON.stringify(stray.purpose)}`
+      );
+    }
+    const rows = mergeRows(scanner, apps, selected);
     const lane = 'apps' in agent ? 'ok' : 'skipped' in agent ? 'skipped' : 'failed';
     const note = 'apps' in agent ? null : 'skipped' in agent ? agent.skipped : agent.failed;
     const agentLine = lane === 'ok' ? 'agent ok' : `agent ${lane}: ${note}`;

@@ -19,9 +19,9 @@
  * is a finding, not an absence).
  */
 export type SurfaceVerdict =
-  /** Language and deployability both resolve, and they agree. Safe to pre-select. */
+  /** Language and deployability both resolve, and they agree. */
   | 'confirmed'
-  /** Language resolves; deployability is inferred from weaker signal. Pre-select, but say why. */
+  /** Language resolves; deployability is inferred from weaker signal. */
   | 'probable'
   /** More than one surface is genuinely defensible here. The user picks — the detector must not. */
   | 'ambiguous'
@@ -34,11 +34,6 @@ export const SURFACE_VERDICTS: readonly SurfaceVerdict[] = Object.freeze([
   'ambiguous',
   'undecidable',
 ]);
-
-/** True for verdicts a caller may pre-select in a confirmation prompt. */
-export function isPreselectable(v: SurfaceVerdict): boolean {
-  return v === 'confirmed' || v === 'probable';
-}
 
 /**
  * One reason the detector believes what it believes.
