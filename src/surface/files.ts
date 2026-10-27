@@ -54,6 +54,7 @@ async function walk(
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
     const relPath = rel ? `${rel}/${entry.name}` : entry.name;
     if (entry.isDirectory()) {
+      if (entry.name === ".surface-cache") continue;
       if (isBoundary(relPath, boundaries)) continue;
       if (SKIP_DIRS.has(entry.name) || extraSkip.some((pattern) => pattern.test(relPath))) {
         skipped.push({ path: relPath, reason: "excluded" });

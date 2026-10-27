@@ -67,7 +67,7 @@ async function scan(
   const names = entries.filter((entry) => entry.isFile() && MANIFESTS.has(entry.name)).map((entry) => entry.name);
   if (names.length > 0) manifests.set(rel || ".", names.sort());
   for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
+    if (!entry.isDirectory() || entry.name === ".surface-cache") continue;
     const relPath = rel ? `${rel}/${entry.name}` : entry.name;
     if (SKIP_DIRS.has(entry.name)) {
       const review = await containsManifest(join(dir, entry.name), 0);
@@ -122,7 +122,7 @@ async function manifestless(
     });
   }
   for (const entry of entries) {
-    if (!entry.isDirectory() || SKIP_DIRS.has(entry.name)) continue;
+    if (!entry.isDirectory() || entry.name === ".surface-cache" || SKIP_DIRS.has(entry.name)) continue;
     const relPath = rel ? `${rel}/${entry.name}` : entry.name;
     if (manifestDirs.has(relPath)) continue;
     await manifestless(join(dir, entry.name), relPath, manifestDirs, units);
