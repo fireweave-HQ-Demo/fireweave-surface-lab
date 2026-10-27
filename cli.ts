@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
@@ -8,6 +8,7 @@ import { detectSurfaces } from './detect/detect-surfaces';
 import { mergeRows, strayAgentPurposes, type ConfirmRow, type ScannerRow } from './merge';
 import { partitionSurfaces, toScannerRow } from './select';
 import { runSurfacePipeline } from './src/surface/pipeline';
+import { boxTable, byAction, byConfidence, renderReport, type ReportDiff } from './src/surface/report';
 import type { Diff } from './src/surface/types';
 
 const GITHUB =
@@ -69,14 +70,6 @@ async function checkout(link: GitLink): Promise<string> {
   }
 }
 
-function formatTable(header: readonly string[], body: readonly (readonly string[])[]): string {
-  const widths = header.map((cell, i) =>
-    Math.max(cell.length, ...body.map((line) => line[i]!.length))
-  );
-  const line = (cells: readonly string[]) =>
-    cells.map((cell, i) => cell.padEnd(widths[i]!)).join('  ');
-  return [line(header), ...body.map(line)].join('\n');
-}
 
 function scannerCell(diff: Diff): string {
   if (diff.scanner.selected) return 'surface';
@@ -92,22 +85,36 @@ function agentCell(diff: Diff): string {
   return claim.claim === 'runs' ? 'runs(verified)' : claim.claim;
 }
 
-function formatDiff(diffs: readonly Diff[]): string {
-  return formatTable(
-    ['Unit', 'Scanner', 'Agent', 'Cell', 'Action', 'Citation'],
+function toReportDiff(diff: Diff, confidence: string): ReportDiff {
+  return {
+    unit: diff.unit,
+    scanner: scannerCell(diff),
+    agent: agentCell(diff),
+    cell: diff.cell,
+    action: diff.action,
+    citation: diff.agent.entrypoint ? `${diff.agent.entrypoint.file}:${diff.agent.entrypoint.line}` : '—',
+    confidence,
+  };
+}
+
+function formatDiff(diffs: readonly ReportDiff[]): string {
+  return boxTable(
+    ['Unit', 'Scanner', 'Agent', 'Cell', 'Action', 'Confidence', 'Citation'],
     diffs.map((diff) => [
       diff.unit,
-      scannerCell(diff),
-      agentCell(diff),
+      diff.scanner,
+      diff.agent,
       diff.cell,
       diff.action,
-      diff.agent.entrypoint ? `${diff.agent.entrypoint.file}:${diff.agent.entrypoint.line}` : '—',
-    ])
+      diff.confidence || '—',
+      diff.citation,
+    ]),
+    [22, undefined, undefined, undefined, undefined, undefined, 42]
   );
 }
 
 function formatRows(rows: readonly ConfirmRow[]): string {
-  return formatTable(
+  return boxTable(
     ['Path', 'Stack', 'Confidence', 'Evidence', 'Purpose', 'Source'],
     rows.map((row) => [
       row.path,
@@ -116,7 +123,8 @@ function formatRows(rows: readonly ConfirmRow[]): string {
       row.evidence,
       row.purpose ?? '—',
       row.source,
-    ])
+    ]),
+    [22, undefined, undefined, 36, 52, undefined]
   );
 }
 
@@ -170,7 +178,8 @@ async function main(): Promise<void> {
         `agent returned a purpose for an unselected path ${stray.path}: ${JSON.stringify(stray.purpose)}`
       );
     }
-    const rows = mergeRows(scanner, apps, selected);
+    const rows = byConfidence(mergeRows(scanner, apps, selected));
+    const confidenceOf = new Map(rows.map((row) => [row.path, row.confidence]));
     const lane = 'apps' in agent ? 'ok' : 'skipped' in agent ? 'skipped' : 'failed';
     const note = 'apps' in agent ? null : 'skipped' in agent ? agent.skipped : agent.failed;
     const agentLine = lane === 'ok' ? 'agent ok' : `agent ${lane}: ${note}`;
@@ -183,11 +192,12 @@ async function main(): Promise<void> {
       for (const zone of found.unreadable) console.log(`unreadable ${zone.path}: ${zone.reason}`);
     }
     if (rows.length > 0) console.log(`\n${formatRows(rows)}`);
-    if (!promote && held.length > 0) {
+    const heldRows = [...held].sort((a, b) => a.path.localeCompare(b.path));
+    if (!promote && heldRows.length > 0) {
       console.log(
-        `\nNot selected\n${formatTable(
+        `\nNot selected\n${boxTable(
           ['Path', 'Stack', 'Verdict', 'Kind', 'Reason'],
-          held.map((zone) => [
+          heldRows.map((zone) => [
             zone.path,
             zone.surface ?? zone.kind,
             zone.verdict,
@@ -201,17 +211,47 @@ async function main(): Promise<void> {
       console.log(`\nReview\n${promote.review.join('\n')}`);
     }
     if (shadow) {
-      console.log(`\nAgent diff (${shadow.mode})\n${formatDiff(shadow.diffs)}`);
+      const diffs = byAction(
+        shadow.diffs.map((diff) => toReportDiff(diff, confidenceOf.get(diff.unit) ?? ''))
+      );
+      console.log(`\nAgent diff (${shadow.mode})\n${formatDiff(diffs)}`);
+      const reportPath = join(process.cwd(), 'surface-report.html');
+      await writeFile(
+        reportPath,
+        renderReport({
+          title: `${link.owner}/${link.repo}`,
+          summary: promote
+            ? `${rows.length} surfaces from ${found.zonesExamined} zones. ${promote.review.length} in review. ${agentLine}.`
+            : `${rows.length} surfaces from ${found.zonesExamined} zones. ${held.length} not selected. ${agentLine}.`,
+          surfaces: rows.map((row) => ({
+            path: row.path,
+            stack: row.stack,
+            confidence: row.confidence,
+            evidence: row.evidence,
+            purpose: row.purpose,
+            source: row.source,
+          })),
+          held: heldRows.map((zone) => ({
+            path: zone.path,
+            stack: zone.surface ?? zone.kind,
+            verdict: zone.verdict,
+            kind: zone.kind,
+            reason: zone.reason,
+          })),
+          diffs,
+          convention: shadow.conventions[0]
+            ? { rule: shadow.conventions[0].rule, exceptions: shadow.conventions[0].exceptions }
+            : null,
+          excluded: shadow.excluded,
+        })
+      );
+      console.log(`\nReport  ${reportPath}`);
       if (shadow.conventions.length > 0) {
         console.log('\nConventions');
         for (const convention of shadow.conventions) {
-          console.log(convention.rule);
-          for (const line of convention.evidence) console.log(`  ${line}`);
-          console.log(
-            convention.exceptions.length > 0
-              ? `  exceptions: ${convention.exceptions.join(', ')}`
-              : '  exceptions: none'
-          );
+          const exceptions =
+            convention.exceptions.length > 0 ? convention.exceptions.join(', ') : 'none';
+          console.log(`${convention.rule}\nexceptions: ${exceptions}`);
         }
       }
       console.log('\nExcluded');

@@ -1,3 +1,4 @@
 node_modules
 .env
 .surface-cache/
+surface-report.html
