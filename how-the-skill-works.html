@@ -39,6 +39,7 @@
     }
     .done { margin: 0.45rem 0 0; color: #57534e; font-size: 0.95rem; }
     table { width: 100%; border-collapse: collapse; background: white; margin: 0.8rem 0 0.2rem; }
+    td br { display: block; margin-top: 0.35rem; }
     th, td { text-align: left; vertical-align: top; border-bottom: 1px solid #e7e5e4; padding: 0.55rem 0.65rem; }
     th { font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: #57534e; background: #f5f5f4; }
     code { font-size: 0.86em; }
@@ -64,15 +65,19 @@
 
   <p>A <strong>surface</strong> is a part of the product you would run and watch: a server, a background worker, a website, or a command-line program. A shared library, a test or build script, and an empty placeholder are not surfaces, even when they have a package file or a name that sounds like an app.</p>
 
-  <h2>Two rules</h2>
+  <h2>Three rules</h2>
   <div class="rules">
     <div class="rule">
       <strong>A yes needs a file and a line.</strong>
-      Saying “this runs” is allowed only with the exact line that starts it. Creating the app, exporting a route, or pointing at a config file is not enough. A server has to open a port and stay running. A worker has to enter a loop or wait on a queue.
+      Saying “this runs” is allowed only with the exact line that starts it. Creating the app, exporting a route, or pointing at a config file is not enough. A server has to open a port and stay running. A worker has to enter a loop or wait on a queue. That line has to be one the program reaches: the top of the file, the language’s entry, or a function that entry calls. A brace or <code>/*</code> inside quotes is text. It does not open a block, and it does not hide a later line.
     </div>
     <div class="rule">
       <strong>A no needs a record of the search.</strong>
       Saying “nothing runs here” is allowed only when the report lists what was opened and what was searched. “We did not find it” and “we did not look” are different answers. An empty search is rejected.
+    </div>
+    <div class="rule">
+      <strong>A line that runs can still be the wrong kind.</strong>
+      <code>if __name__ == "__main__":</code> with a listener in that block is a server, and the citation is the listener. <code>func main</code> with <code>r.Run</code> or <code>ListenAndServe</code> inside it is a server, and the citation is that call. The same guard with no listener under it runs and is not a surface. Record the file and line as <code>runs_not_surface</code>. Leave it off the surface list.
     </div>
   </div>
   <p>If the proof is incomplete, the folder goes to review. It is not forced into a yes or a no.</p>
@@ -101,8 +106,8 @@
       <h3>Write the search plan before judging</h3>
       <p>For each kind, list the searches you will run. Do this before any file is judged.</p>
       <ul>
-        <li>A server: <code>listen(</code>, <code>bind(</code>, <code>serve_forever</code>, <code>ListenAndServe</code>.</li>
-        <li>A worker: <code>while True</code>, <code>asyncio</code>, a queue consumer, a scheduled job.</li>
+        <li>A server: the listener column for that language. JavaScript: <code>serve(</code>, <code>listen(</code>, <code>Deno.serve(</code>. Python: <code>uvicorn.run</code>, <code>server.run(</code>, <code>execute_from_command_line</code>. Go: <code>ListenAndServe</code>, <code>.Run(</code>, <code>.Start(</code>. Rust: <code>HttpServer::new</code>, <code>Server::bind</code>, <code>axum::serve</code>. Java: <code>SpringApplication.run</code>, <code>port(8080)</code>.</li>
+        <li>A worker: <code>while True</code>, <code>asyncio.run</code> of a queue, <code>worker.run(</code>, a scheduled job.</li>
         <li>A website: a page with its assets, or a site config.</li>
         <li>A command: argument parsing, then exit.</li>
         <li>A library: exports only, and no line that runs.</li>
@@ -112,8 +117,8 @@
     </li>
     <li class="step">
       <h3>Follow what the project declares</h3>
-      <p>Open each <code>start</code>, <code>serve</code>, <code>dev</code>, and <code>worker</code> script, and each container command. If the script names a file, open that file and find the line that starts the program. If the file is missing, record that and keep going. A test, lint, or build script is not a surface.</p>
-      <p>For a Next.js app, the proof is the <code>start</code> script, <code>next start</code>. The config file and a route function are not the server.</p>
+      <p>Open each <code>start</code>, <code>serve</code>, <code>dev</code>, and <code>worker</code> script, and the last command a container image runs. If it names a file in the folder, open that file and find the line that starts the program. If the file is missing, record that and keep going. A test, lint, or build script is not a surface. A container command that only starts a stock process, such as nginx, did not resolve to a program in this folder.</p>
+      <p>For a few frameworks the script line itself is the server: <code>next start</code>, <code>next dev</code>, <code>gunicorn</code>, and Django <code>runserver</code>. The config file and a route function are not. Every other start command is a lead. Follow it to a listener in the source.</p>
       <p class="done">Done when every declared script has been followed to a line, or recorded as unresolved.</p>
     </li>
     <li class="step">
@@ -123,8 +128,9 @@
     </li>
     <li class="step">
       <h3>Name it from the line, not the folder</h3>
-      <p>The line decides the kind. A folder named <code>browser-runner</code> whose code calls <code>serve_forever()</code> is a server, because that call opens a port and does not return. A folder named <code>worker</code> that only exports functions is a library. One folder can contain two surfaces, such as a server and a worker side by side.</p>
-      <p class="done">Done when each yes points at one line, and that line matches the kind.</p>
+      <p>The line decides the kind, and the program has to reach that line: the top of the file, the language’s entry (<code>if __name__</code>, <code>func main</code>, <code>fn main</code>, <code>main</code>), or a function that entry calls. A folder named <code>browser-runner</code> whose code calls <code>serve_forever()</code> is a server, because that call opens a port and does not return. A folder named <code>worker</code> that only exports functions is a library. One folder can contain two surfaces, such as a server and a worker side by side.</p>
+      <p>When the listener sits inside the entry, cite the listener. <code>server.run()</code> or <code>execute_from_command_line(...)</code> under <code>if __name__</code> is a server. <code>r.Run</code> or <code>ListenAndServe</code> inside <code>func main</code> is a server. The guard line is the entry. The call under it is the proof. A guard or <code>func main</code> with no listener under it is <code>runs_not_surface</code>.</p>
+      <p class="done">Done when each yes points at one line, that line matches the kind, and the program reaches it.</p>
     </li>
     <li class="step">
       <h3>Say how this could be wrong, then go check</h3>
@@ -134,12 +140,12 @@
         <li>You said nothing runs. Wrong if a container command or a script was never opened. Open it.</li>
         <li>You said server. Wrong if the listener sits inside a function nothing calls, or the same program also waits on a queue. Read that line.</li>
       </ul>
-      <p>After the check, a second pass re-reads the cited line and does not trust the write-up. The file has to exist. The line has to exist. The line itself has to be the start for the kind you named. A constructor on the line above does not count, even when the real start is the next line. If you said a script led you there, that script is followed again and the line has to match. A “nothing runs” answer needs a non-empty search: at least one attempt to follow a script, one sweep of the code, and every file you opened. A “this runs” answer cannot be a library or a test script. Any failed check moves the folder to review. Nothing is upgraded.</p>
+      <p>After the check, a second pass re-reads the cited line and does not trust the write-up. The file has to exist. The line has to exist. The line itself has to be the start for the kind you named, in that language. A constructor on the line above does not count, even when the real start is the next line. The program has to reach the line. Quotes are not code: a <code>{</code> or <code>/*</code> inside a string does not open a block and does not hide a later listener. If you said a script led you there, that script is followed again and the line has to match. A “nothing runs” answer needs a non-empty search: at least one attempt to follow a script, one sweep of the code, and every file you opened. A “this runs” answer cannot be a library or a test script. A guard that runs and contains no listener stays <code>runs_not_surface</code>, with the file and line, and is not a surface. Any failed check moves the folder to review. Nothing is upgraded.</p>
       <p class="done">Done when the challenge names a concrete check, that check was done, and the second pass has accepted the line or moved the folder to review.</p>
     </li>
     <li class="step">
       <h3>Write the report</h3>
-      <p>Surfaces are sorted with the strongest proof first. High means a declared script led to the line and the checker agreed. Medium means the line was found by reading the code, with no script pointing at it. Review means the proof was not enough to say yes or no.</p>
+      <p>Surfaces are sorted with the strongest proof first. High means a declared script led to the line and the checker agreed. Medium means the line was found by reading the code, with no script pointing at it. Review means the proof was not enough to say yes or no. A folder whose only executing line is a guard with no listener stays off the list. The report keeps that file and line.</p>
       <p class="done">Done when every running program is listed with its line, and every other folder is under not selected or review. One folder can list more than one program.</p>
     </li>
   </ol>
@@ -148,11 +154,12 @@
   <table>
     <thead><tr><th>Kind</th><th>The line has to</th><th>A line that is not enough</th></tr></thead>
     <tbody>
-      <tr><td>Server</td><td>Open a port and keep running. The call depends on the language: <code>serve(</code>, <code>Bun.serve(</code>, <code>serve_forever()</code>, <code>ListenAndServe</code>, <code>axum::serve</code>, <code>SpringApplication.run</code>, or a framework start line such as <code>next start</code>.</td><td><code>new Hono()</code>, <code>FastAPI()</code>, <code>http.HandleFunc</code>, <code>@RestController</code>, a route function, <code>next.config.ts</code>.</td></tr>
-      <tr><td>Worker</td><td>Enter a loop or wait on a queue, and not open a port. Examples: <code>worker.run()</code>, <code>asyncio.run</code> for a queue.</td><td>A function named <code>worker</code> with no loop.</td></tr>
+      <tr><td>Server</td><td>Open a port and keep running, on a line the program reaches.<br>JavaScript: <code>serve(</code>, <code>.listen(</code>, <code>Bun.serve(</code>, <code>Deno.serve(</code>, or the script <code>next start</code>.<br>Python: <code>uvicorn.run</code>, <code>server.run(</code>, <code>app.run(</code>, <code>.run_app(</code>, <code>.serve_forever(</code>, <code>execute_from_command_line(</code>, or <code>gunicorn</code> / <code>runserver</code>.<br>Go: <code>ListenAndServe</code>, <code>net.Listen</code>, <code>.Run(</code>, <code>.Start(</code>, <code>.Listen(</code>.<br>Rust: <code>TcpListener::bind</code>, <code>axum::serve</code>, <code>HttpServer::new</code>, <code>Server::bind</code>.<br>Java: <code>SpringApplication.run</code>, <code>port(8080)</code>.</td><td><code>new Hono()</code>, <code>FastAPI()</code>, <code>Flask()</code>, <code>http.HandleFunc</code>, <code>@RestController</code>, a route function, <code>next.config.ts</code>, <code>asyncio.run(</code>, <code>worker.run(</code>. The guard line, when the listener is the call inside it.</td></tr>
+      <tr><td>Worker</td><td>Enter a loop or wait on a queue. Examples: <code>worker.run()</code>, <code>asyncio.run</code> of a queue consumer. <code>asyncio.run</code> of an HTTP server is a server.</td><td>A function named <code>worker</code> with no loop.</td></tr>
       <tr><td>Website</td><td>Be a site you can deploy: a page with its assets, or the command that starts the site.</td><td>One stray HTML file with no assets and no start command.</td></tr>
       <tr><td>Command</td><td>Parse arguments, run, and exit. Examples: <code>argparse</code>, <code>process.argv</code>.</td><td>A button handler such as <code>.click()</code>.</td></tr>
       <tr><td>Library</td><td>Only export code that other folders import.</td><td>Any line that listens or loops. If that line exists, it is not a library.</td></tr>
+      <tr><td>Runs, not a surface</td><td>The file executes, and the cited line is a guard or a tool with no listener under it. A bare <code>if __name__</code>, a <code>func main</code> that returns, <code>vitest</code>, <code>pytest</code>, <code>tsc</code>. The claim is <code>runs_not_surface</code>. The file and line stay in the record.</td><td>Calling it a server because the file has a <code>main</code>.</td></tr>
       <tr><td>Placeholder</td><td>Have a package file and no program. The description may say the work is later. The missing program is the reason.</td><td>The description on its own.</td></tr>
     </tbody>
   </table>
@@ -160,7 +167,7 @@
   <h2>References</h2>
   <p>Read these with the step that needs them. The page is the overview. The files are the rulebook.</p>
   <ul>
-    <li><a href=".cursor/skills/surface-detection/SKILL.md">Skill</a>. The nine steps, the two rules, and what the second pass checks.</li>
+    <li><a href=".cursor/skills/surface-detection/SKILL.md">Skill</a>. The nine steps, the citation rules, and what the second pass checks.</li>
     <li><a href=".cursor/skills/surface-detection/references/conventions.md">Conventions</a>. Read before step 3 in a repository with apps and packages.</li>
     <li><a href=".cursor/skills/surface-detection/references/constructs.md">What each kind of line must contain</a>. Read before step 7.</li>
     <li><a href=".cursor/skills/surface-detection/references/failure-modes.md">When you are stuck</a>. Read before you send a folder to review.</li>
@@ -178,7 +185,7 @@
   <p><code>apps/api</code> declares <code>dev: tsx src/server.ts</code>. The dependency list includes Hono. This is one folder, walked through the steps that decide the line.</p>
   <p><strong>Expectation.</strong> A server, because the dev script names a source file. For: the script is <code>tsx src/server.ts</code>, not a test runner. Against: the file might only construct the app and never start it.</p>
   <p><strong>Search plan, before judging.</strong> In that file, search for <code>serve(</code> and <code>listen(</code>. Do not accept <code>new Hono()</code>. The package file also has a worker script, so search <code>src/worker.ts</code> separately for <code>worker.run()</code>.</p>
-  <p><strong>Follow the script.</strong> <code>src/server.ts</code> exists. Line 26 is <code>new Hono()</code>. That line creates the app and does not open a port. Line 275 is <code>serve({ fetch: app.fetch, port: env.port })</code>. That is the line.</p>
+  <p><strong>Follow the script.</strong> <code>src/server.ts</code> exists. Line 26 is <code>new Hono()</code>. That line creates the app and does not open a port. Line 30 is a route, <code>"/api/auth/*"</code>. The <code>/*</code> is inside a string, so it does not start a comment, and the rest of the file is still code. Line 275 is <code>serve({ fetch: app.fetch, port: env.port })</code>. That is the line.</p>
   <p><strong>How this could be wrong.</strong> The dev script might point at a test runner, or <code>serve()</code> might sit inside a function nothing calls. Check: open <code>package.json</code> and read <code>scripts.dev</code>. It is <code>tsx src/server.ts</code>. Open <code>src/server.ts</code> at line 275. <code>serve()</code> is at the top level, not inside an unused function.</p>
   <p><strong>The written result.</strong> Every field is required. An empty one means go back, or send the folder to review.</p>
   <pre>{
@@ -205,6 +212,7 @@
   },
   "confidence": "high"
 }</pre>
-  <p>Citing line 26, <code>new Hono()</code>, is rejected. The second pass re-reads that line, sees a constructor, and sends the answer to review.</p>
+  <p>Citing line 26, <code>new Hono()</code>, is rejected. The second pass re-reads that line, sees a constructor, and sends the answer to review. Treating <code>"/api/auth/*"</code> as a comment and then reporting that nothing runs is the same failure: the search stopped in the middle of a string.</p>
+  <p>The same citation rule in Python and Go. <code>manage.py</code> reaches <code>execute_from_command_line(sys.argv)</code> from <code>if __name__ == "__main__"</code>. The line is that call, and the kind is a server, because the call starts <code>runserver</code>. <code>server.run()</code> under the same guard is a server. <code>r.Run</code> inside <code>func main</code> is a server. Citing the guard and leaving out the call is rejected. A guard whose block has no listener is <code>runs_not_surface</code>: the file and line are kept, and the folder is not a surface. A <code>{</code> inside a Go raw string is text. It does not open a block, and <code>ListenAndServe</code> after it still counts.</p>
 </body>
 </html>

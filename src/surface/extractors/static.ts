@@ -6,8 +6,8 @@ import { cite, readText, type Idiom } from "./scan";
 const IDIOMS: Idiom[] = [
   { grep: /\bconst\s+nextConfig\b/, construct: "site_config" },
   { grep: /\bexport\s+default\s+nextConfig\b/, construct: "site_config" },
-  { grep: /<html(?:\s|>)/i, construct: "document" },
-  { grep: /<main(?:\s|>)/i, construct: "document" },
+  { grep: /<script\b[^>]*\bsrc\s*=/i, construct: "document" },
+  { grep: /<link\b[^>]*\brel\s*=/i, construct: "document" },
   { grep: /\bexport\s+default\s+function\s+Page\b/, construct: "document" },
 ];
 

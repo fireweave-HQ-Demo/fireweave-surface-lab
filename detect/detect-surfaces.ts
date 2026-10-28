@@ -257,7 +257,17 @@ function nominateSurfaces(
       });
     }
     const engines = m0.engines;
-    if (engines !== null && typeof engines === 'object' && 'node' in engines) {
+    // `engines.node` means the toolchain runs on Node. Vite, tsc, and Vitest all
+    // do. It is a server only when this package is not already a browser app.
+    // A browser package that also depends on express stays ambiguous: that is
+    // two programs. A browser package that only declares the engine is one app.
+    const browserApp = web.length > 0 || browserSignals > 0;
+    if (
+      engines !== null &&
+      typeof engines === 'object' &&
+      'node' in engines &&
+      !(browserApp && server.length === 0)
+    ) {
       add('ts-server', {
         kind: 'language.engines-node',
         path: `${zone.path}/package.json`,

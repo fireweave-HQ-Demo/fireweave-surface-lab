@@ -112,6 +112,43 @@ describe('detectSurfaces — verdicts are named, and each name means something',
     ]);
   });
 
+  test('a vite app that declares engines.node is one web app', async () => {
+    const root = repo({
+      'package.json': pkg({
+        name: 'nasa-explorer',
+        private: true,
+        engines: { node: '>=20' },
+        scripts: { dev: 'vite', build: 'tsc -b && vite build' },
+        dependencies: { 'react-dom': '^19.0.0' },
+        devDependencies: { vite: '^8.0.0' },
+      }),
+      'index.html':
+        '<link rel="icon" href="/favicon.svg" />\n<script type="module" src="/src/main.tsx"></script>\n',
+      'src/main.tsx': 'export const app = 1;\n',
+    });
+    const z = at(await detectSurfaces({ cwd: root }), '.');
+    expect(z?.surface).toBe('web');
+    expect(z?.verdict).toBe('confirmed');
+    expect(z?.kind).toBe('app');
+    expect(z?.alternatives).toEqual([]);
+  });
+
+  test('engines.node still marks a package with no browser signal as ts-server', async () => {
+    const root = repo({
+      'package.json': pkg({
+        name: 'api',
+        private: true,
+        engines: { node: '>=20' },
+        scripts: { start: 'node src/index.ts' },
+      }),
+      'src/index.ts': 'export const x = 1;\n',
+    });
+    const z = at(await detectSurfaces({ cwd: root }), '.');
+    expect(z?.surface).toBe('ts-server');
+    expect(z?.verdict).toBe('confirmed');
+    expect(z?.kind).toBe('app');
+  });
+
   test('undecidable is REPORTED, not dropped', async () => {
     // A deployable zone in a language FireWeave has no surface for. Silence
     // here would read as "this repo has no such directory", which is the

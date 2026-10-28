@@ -60,8 +60,8 @@ const WORKER = [
 const STATIC_WEB = [
   /\bconst\s+nextConfig\b/,
   /\bexport\s+default\s+nextConfig\b/,
-  /<script\s+src=/,
-  /<link\s+rel=/,
+  /<script\b[^>]*\bsrc\s*=/i,
+  /<link\b[^>]*\brel\s*=/i,
 ];
 
 const CLI = [

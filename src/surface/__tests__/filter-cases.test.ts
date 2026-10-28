@@ -186,4 +186,47 @@ describe("filter cases", () => {
     expect(result.promotion?.selected).not.toContain("apps/sandbox");
     expect(result.promotion?.selected).not.toContain("apps/voice-worker");
   });
+
+  test("a single vite app is a static site, and msw listen is not a second surface", async () => {
+    const root = repo({
+      "package.json": pkg({
+        name: "nasa-explorer",
+        private: true,
+        engines: { node: ">=20" },
+        scripts: { dev: "vite", build: "tsc -b && vite build", test: "vitest run" },
+        dependencies: { "react-dom": "19.0.0" },
+        devDependencies: { vite: "8.0.0", vitest: "5.0.0", msw: "3.0.0" },
+      }),
+      "index.html": `<!doctype html>
+<html lang="en">
+  <head>
+    <link rel="icon" href="/favicon.svg" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+`,
+      "src/main.tsx":
+        "import { createRoot } from 'react-dom/client';\ncreateRoot(document.getElementById('root')!).render(null);\n",
+      "src/app/App.tsx": "export function App() { return null; }\n",
+      "src/test/server.ts":
+        "import { setupServer } from 'msw/node';\nexport const server = setupServer();\n",
+      "src/test/setup.ts":
+        "import { beforeAll } from 'vitest';\nimport { server } from './server';\nbeforeAll(() => server.listen({ onUnhandledFrame: 'error' }));\n",
+    });
+    const result = await runSurfacePipeline(root, [
+      { path: ".", verdict: "confirmed", kind: "app", selected: true },
+    ]);
+    const diff = result.diffs.find((row) => row.unit === ".");
+    expect(diff?.agent.verified).toBe(true);
+    expect(diff?.agent.claim).toBe("runs");
+    expect(diff?.agent.category).toBe("static-web");
+    expect(diff?.agent.entrypoint?.file).toBe("index.html");
+    expect(diff?.agent.entrypoint?.snippet).toContain('rel="icon"');
+    expect(diff?.cell).toBe("both_surface");
+    expect(result.diffs.some((row) => row.unit === "src/test")).toBe(false);
+    expect(result.diffs.some((row) => row.unit.startsWith("src/"))).toBe(false);
+  });
 });

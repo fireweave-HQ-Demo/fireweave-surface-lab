@@ -120,12 +120,30 @@ async function manifestless(
   }
 }
 
+const PACKAGE_SOURCE = new Set(["src", "public", "test", "tests", "__tests__"]);
+
 /** Source directly inside a manifest unit belongs to that unit. */
 function ownedByManifest(path: string, manifestDirs: Set<string>): boolean {
   if (path === ".") return false;
   const parent = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : ".";
   if (manifestDirs.has(parent)) return true;
-  return insideManifest(path, manifestDirs);
+  if (insideManifest(path, manifestDirs)) return true;
+  return underPackageSource(path, manifestDirs);
+}
+
+/**
+ * `src/app` is the root package's source, not a second program.
+ * `apps/sandbox` stays its own unit: its first directory is not a source tree.
+ */
+function underPackageSource(path: string, manifestDirs: Set<string>): boolean {
+  const parts = path.split("/");
+  for (let i = 0; i < parts.length; i++) {
+    const ancestor = i === 0 ? "." : parts.slice(0, i).join("/");
+    if (!manifestDirs.has(ancestor)) continue;
+    const next = parts[i];
+    if (next && PACKAGE_SOURCE.has(next)) return true;
+  }
+  return false;
 }
 
 /** True when a non-root ancestor is itself a manifest unit. */

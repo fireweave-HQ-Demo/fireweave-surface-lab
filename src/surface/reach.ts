@@ -1,6 +1,6 @@
 import { codeLines, lexLang, type LexLang } from "./lex";
 
-const SOURCE = /\.(py|ts|tsx|js|mjs|cjs|mts|cts|go|rs|java|kt)$/;
+const SOURCE = /\.(py|ts|tsx|js|mjs|cjs|mts|cts|go|rs|java|kt|html)$/;
 const MANIFEST = /(?:^|\/)(package\.json|pyproject\.toml|Dockerfile|Procfile|go\.mod|Cargo\.toml)$/;
 
 /** A runs citation has to be source or a package file. README and other prose are not. */
@@ -34,6 +34,7 @@ export function lineIsReachable(text: string, lineNo: number, file: string): boo
   const line = lines[lineNo - 1] ?? "";
   if (isCommentLine(line)) return false;
   if (MANIFEST.test(file)) return true;
+  if (file.endsWith(".html")) return !isCommentLine(line);
   if (file.endsWith(".py")) return inReachableScope(pythonScopes(lines), lineNo);
   const lang = lexLang(file);
   if (lang === "go" || lang === "rust") {

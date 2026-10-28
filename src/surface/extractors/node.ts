@@ -33,6 +33,9 @@ export function nodeExtractor(repoRoot: string): Extractor {
       /(?:^|\/)\.next(?:\/|$)/,
       /\.min\.js$/,
       /\.(?:test|spec)\.(?:ts|tsx|js|mjs|cjs)$/,
+      // Vitest setup and MSW live here. `server.listen()` in that file is a test
+      // double, not a process that binds a port.
+      /(?:^|\/)(?:__tests__|tests?)(?:\/|$)/,
     ],
     executionIdioms: () => IDIOMS,
     async packageName(unit: Unit): Promise<string | null> {
